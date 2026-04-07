@@ -1927,14 +1927,38 @@ function deepSimulateMove(fr, fc, tr, tc, mtype, board, gState) {
   } else if (mtype === 'capture') {
     capturedPiece = newBoard[tr][tc];
   } else if (mtype === 'sumo_push') {
+    // For sumo rook: push all pieces in a chain
     const dr = tr-fr>0?1:tr-fr<0?-1:0, dc = tc-fc>0?1:tc-fc<0?-1:0;
-    const pr = tr+dr, pc = tc+dc;
-    if (inBounds(pr,pc) && !newBoard[pr][pc]) {
-      newBoard[pr][pc] = newBoard[tr][tc];
-    } else {
-      capturedPiece = newBoard[tr][tc];
+    
+    // Find all pieces in the chain starting from tr,tc
+    let chainSquares = [];
+    let r = tr, c = tc;
+    while(inBounds(r, c) && newBoard[r][c]) {
+      chainSquares.push([r, c]);
+      r += dr;
+      c += dc;
     }
-    newBoard[tr][tc] = null;
+    
+    // Push the entire chain by one square (reverse order to avoid overwriting)
+    if(chainSquares.length > 0) {
+      const lastR = chainSquares[chainSquares.length - 1][0];
+      const lastC = chainSquares[chainSquares.length - 1][1];
+      const pushToR = lastR + dr;
+      const pushToC = lastC + dc;
+      
+      if(inBounds(pushToR, pushToC) && !newBoard[pushToR][pushToC]) {
+        // Move pieces from back to front
+        newBoard[pushToR][pushToC] = newBoard[lastR][lastC];
+        for(let i = chainSquares.length - 2; i >= 0; i--) {
+          const fromR = chainSquares[i][0];
+          const fromC = chainSquares[i][1];
+          const toR = chainSquares[i+1][0];
+          const toC = chainSquares[i+1][1];
+          newBoard[toR][toC] = newBoard[fromR][fromC];
+        }
+        newBoard[tr][tc] = null;
+      }
+    }
   } else if (mtype === 'castle-k') {
     newBoard[fr][5] = newBoard[fr][7]; newBoard[fr][7] = null;
   } else if (mtype === 'castle-q') {
@@ -2683,6 +2707,10 @@ function startGame() {
     }
   }
 
+  // Determine if board should be flipped based on engine mode
+  const shouldFlipBoard = (engineSettings.mode === 'play-black' || engineSettings.mode === 'play-both');
+  boardFlipped = shouldFlipBoard;
+
   game = {
     board,
     turn: 'w',
@@ -2742,6 +2770,7 @@ function startGame() {
 function returnLobby() {
   stopStockfish();
   game = null;
+  boardFlipped = false;
   document.getElementById('lobby').classList.remove('hidden');
   document.getElementById('game-over').classList.remove('show');
   lobbyConfig = {white:[null,null,null,null], black:[null,null,null,null]};
@@ -2993,7 +3022,7 @@ function addPawnMoves(moves, row, col, color, board, g, sq, canCapture) {
     for(const dc of [-1,1]) {
       const tr = row+dir, tc = col+dc;
       if(!inBounds(tr,tc)) continue;
-      if(board[tr][tc] && board[tr][tc].color===opp) {
+      if(board[tr][tc] && board[tr][tc].color===opp && board[tr][tc].ability !== 'ironpawn') {
         moves.push([tr, tc, 'capture']);
       }
       if(g.enPassant && tr===g.enPassant[0] && tc===g.enPassant[1]) {
@@ -3027,7 +3056,7 @@ function addPawnMoves(moves, row, col, color, board, g, sq, canCapture) {
       if(board[tr][tc] && board[tr][tc].color===opp && board[tr][tc].type==='P') {
         const tr2 = tr+dir, tc2 = tc;
         if(inBounds(tr2,tc2) && !board[tr2][tc2]) moves.push([tr2,tc2,'move']);
-        else if(inBounds(tr2,tc2) && board[tr2][tc2] && board[tr2][tc2].color===opp) moves.push([tr2,tc2,'capture']);
+        else if(inBounds(tr2,tc2) && board[tr2][tc2] && board[tr2][tc2].color===opp && board[tr2][tc2].ability !== 'ironpawn') moves.push([tr2,tc2,'capture']);
       }
     }
   }
@@ -3052,7 +3081,7 @@ function addKnightMoves(moves, row, col, color, board, sq) {
     if(!inBounds(tr,tc)) continue;
     const target = board[tr][tc];
     if(!target) moves.push([tr,tc,'move']);
-    else if(target.color===opp && sq.ability !== 'antiviolence') moves.push([tr,tc,'capture']);
+    else if(target.color===opp && sq.ability !== 'antiviolence' && target.ability !== 'ironpawn') moves.push([tr,tc,'capture']);
   }
 
   if(sq.ability==='fish' && game && game.specialState.lastMovedPiece === `${row},${col}`) {
@@ -3092,7 +3121,7 @@ function addBishopMoves(moves, row, col, color, board, sq, g) {
         moves.push([r,c,'move']);
       } else {
         if(target) {
-          if(target.color===opp) moves.push([r,c,'capture']);
+          if(target.color===opp && target.ability !== 'ironpawn') moves.push([r,c,'capture']);
           break;
         }
         moves.push([r,c,'move']);
@@ -3132,8 +3161,13 @@ function addRookMoves(moves, row, col, color, board, sq) {
       const t=board[r][c];
       if(t){
         if(sq.ability==='phaserook' && t.color===color){r+=dr;c+=dc;continue;}
-        if(t.color===opp && sq.ability!=='sumorook') moves.push([r,c,'capture']);
-        if(t.color===opp && sq.ability==='sumorook') moves.push([r,c,'sumo_push']);
+        if(t.color===opp && sq.ability!=='sumorook' && t.ability !== 'ironpawn') moves.push([r,c,'capture']);
+        if(t.color===opp && sq.ability==='sumorook') {
+          // For sumo rook: check if we can push all pieces in a line
+          if(canSumoRookPush(row, col, r, c, dr, dc, board)) {
+            moves.push([r,c,'sumo_push']);
+          }
+        }
         break;
       }
       moves.push([r,c,'move']);
@@ -3142,13 +3176,31 @@ function addRookMoves(moves, row, col, color, board, sq) {
   }
 }
 
+function canSumoRookPush(fr, fc, tr, tc, dr, dc, board) {
+  // Check if all pieces in the chain from tr,tc onwards can be pushed
+  // We need to find the end of the chain and check if there's space to push it
+  let chainEnd = [tr, tc];
+  let r = tr + dr, c = tc + dc;
+  
+  // Find where the chain ends (either empty square or out of bounds)
+  while(inBounds(r, c) && board[r][c]) {
+    chainEnd = [r, c];
+    r += dr;
+    c += dc;
+  }
+  
+  // Check if there's space to push the chain
+  const pushTo = [chainEnd[0] + dr, chainEnd[1] + dc];
+  return inBounds(pushTo[0], pushTo[1]) && !board[pushTo[0]][pushTo[1]];
+}
+
 function addQueenMoves(moves, row, col, color, board, sq) {
   const opp=color==='w'?'b':'w';
   for(const[dr,dc] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]){
     let r=row+dr,c=col+dc;
     while(inBounds(r,c)){
       const t=board[r][c];
-      if(t){if(t.color===opp)moves.push([r,c,'capture']);break;}
+      if(t){if(t.color===opp && t.ability !== 'ironpawn')moves.push([r,c,'capture']);break;}
       moves.push([r,c,'move']);
       r+=dr;c+=dc;
     }
@@ -3162,7 +3214,7 @@ function addKingMoves(moves, row, col, color, board, g, sq) {
     if(!inBounds(tr,tc))continue;
     const t=board[tr][tc];
     if(t){
-      if(t.color===opp && t.ability!=='antiviolence') moves.push([tr,tc,'capture']);
+      if(t.color===opp && t.ability!=='antiviolence' && t.ability !== 'ironpawn') moves.push([tr,tc,'capture']);
     } else {
       moves.push([tr,tc,'move']);
     }
@@ -3202,13 +3254,20 @@ function getRawMovesSimple(row, col, board) {
 
   switch(sq.type){
     case 'P':
+      // Iron pawn doesn't give check (can't capture)
+      if(sq.ability === 'ironpawn') break;
       for(const dc of[-1,1]){
         const tr=row+dir,tc=col+dc;
         if(inBounds(tr,tc)) moves.push([tr,tc]);
       }
       break;
     case 'N':
-      for(const[dr,dc] of[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){
+      let knightLeaps = [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+      // Camel has 3+1 leaps instead of 2+1
+      if(sq.ability==='camel') {
+        knightLeaps = [[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]];
+      }
+      for(const[dr,dc] of knightLeaps){
         const tr=row+dr,tc=col+dc;
         if(inBounds(tr,tc))moves.push([tr,tc]);
       }
@@ -3222,7 +3281,13 @@ function getRawMovesSimple(row, col, board) {
     case 'R':
       for(const[dr,dc] of[[-1,0],[1,0],[0,-1],[0,1]]){
         let r=row+dr,c=col+dc;
-        while(inBounds(r,c)){moves.push([r,c]);if(board[r][c])break;r+=dr;c+=dc;}
+        while(inBounds(r,c)){
+          // Sumo rook doesn't give check (only pushes, doesn't capture)
+          if(sq.ability === 'sumorook') break;
+          moves.push([r,c]);
+          if(board[r][c])break;
+          r+=dr;c+=dc;
+        }
       }
       break;
     case 'Q':
