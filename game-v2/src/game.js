@@ -215,6 +215,7 @@ export function createGame() {
     replayIndex: 0,
     replayBoard: null,
     engine: createEngine(),
+    aiThinking: false,
   };
 
   function updateGameStatus() {
@@ -425,8 +426,12 @@ export function createGame() {
     if (state.currentTurn === state.playerColor) return;
 
     try {
-      const best = await state.engine.getBestMove(state, { depth: 10 });
+      state.aiThinking = true;
+      state.statusMessage = 'AI is thinking...';
+      redraw();
+      const best = await state.engine.getBestMove(state, { depth: 12 });
       if (!best) {
+        state.aiThinking = false;
         updateGameStatus();
         redraw();
         return;
@@ -435,16 +440,21 @@ export function createGame() {
       if (state.pendingPromotion) {
         const promoMap = { q: PIECE_TYPES.QUEEN, r: PIECE_TYPES.ROOK, b: PIECE_TYPES.BISHOP, n: PIECE_TYPES.KNIGHT };
         await handlePromotion(promoMap[best.promotion] || PIECE_TYPES.QUEEN);
+        state.aiThinking = false;
         return;
       }
+      state.aiThinking = false;
       redraw();
     } catch (error) {
+      state.aiThinking = false;
+      state.statusMessage = 'AI move failed. Please try again.';
+      redraw();
       console.error('Engine move failed', error);
     }
   }
 
   async function handleSquareClick(row, col) {
-    if (!state.started || state.winner || state.pendingPromotion || state.isDraw || state.readOnly || state.replayBoard) return;
+    if (!state.started || state.winner || state.pendingPromotion || state.isDraw || state.readOnly || state.replayBoard || state.aiThinking) return;
     if (state.mode === 'human-vs-ai' && state.currentTurn !== state.playerColor) return;
 
     const piece = getPiece(state.board, row, col);
@@ -474,6 +484,7 @@ export function createGame() {
   }
 
   function applySessionRow(sessionRow, moves = []) {
+    if (!state.engine) state.engine = createEngine();
     state.sessionId = sessionRow.id;
     state.mode = sessionRow.mode === 'human-vs-ai' ? 'human-vs-ai' : GAME_MODES.HUMAN_VS_HUMAN;
     if (state.user) {
@@ -526,9 +537,12 @@ export function createGame() {
       readOnly: false,
       moveHistory: [],
       pendingPromotionMove: null,
+      lastMove: null,
       replayStates: [],
       replayIndex: 0,
       replayBoard: null,
+      engine: createEngine(),
+      aiThinking: false,
     };
     redraw();
   }

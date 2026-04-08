@@ -110,6 +110,11 @@ export function renderStatus(state) {
     return;
   }
 
+  if (state.aiThinking) {
+    statusEl.textContent = 'Human vs AI | AI is thinking...';
+    return;
+  }
+
   if (state.pendingPromotion) {
     statusEl.textContent = `${state.pendingPromotion.color} pawn must be promoted.`;
     return;
