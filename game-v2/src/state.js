@@ -1,5 +1,6 @@
 import { COLORS, GAME_MODES } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
+import { createEmptyAssignments } from './specialized.js';
 
 function createBackRank(color) {
   return [
@@ -50,5 +51,6 @@ export function createInitialState(options = {}) {
     pendingPromotion: null,
     halfmoveClock: 0,
     positionHistory: {},
+    specializedAssignments: createEmptyAssignments(),
   };
 }
