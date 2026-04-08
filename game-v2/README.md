@@ -1,18 +1,14 @@
 # Mycatur Game V2
 
-Structured rebuild area for the `mycatur` chess project.
+Structured active app area for the `mycatur` chess project.
 
-## Current direction
-This app is now focused on one thing first:
-- become a correct, playable **normal chess** game
+## Current implemented directions
+- normal chess baseline
+- specialized ruleset work (including Iron Pawn and Basilisk)
+- sandbox mode with free board editing and on-demand AI requests by side
 
-For now:
-- no specialized piece mechanics
-- no specialized piece setup UI
-- no special powers
-
-## Current structure
-- `index.html` — app shell and current styling
+## Important structure
+- `index.html` — app shell and UI layout
 - `src/config.js` — constants and mode names
 - `src/pieces.js` — piece types and symbols
 - `src/state.js` — initial board and game state
@@ -20,22 +16,25 @@ For now:
 - `src/game.js` — gameplay flow and interaction handling
 - `src/ui.js` — DOM rendering and controls
 - `src/main.js` — startup entrypoint
-- `docs/CURRENT_STATE.md` — current state summary
-- `docs/IMPLEMENTATION_PLAN.md` — implementation plan
-- `docs/HANDOFF.md` — handover notes
+- `ops/docker-compose.yml` — deployment compose file
+- `ops/Makefile` — local deploy/help commands
+- `docs/` — implementation notes and checkpoints
 
-## Important status note
-The current implementation is a structured baseline, not yet full rules-complete chess.
-The next major work is to complete full chess rules correctly before revisiting engine quality or UI redesign.
+## Running / deploying
+From repo root:
 
-## Local run
 ```bash
 cd /root/.openclaw/project/mycatur
-python3 -m http.server 8000
+make -f game-v2/ops/Makefile help
 ```
 
-Open:
-- `http://127.0.0.1:8000/game-v2/`
+Useful commands:
+- `make -f game-v2/ops/Makefile deploy`
+- `make -f game-v2/ops/Makefile ps`
+- `make -f game-v2/ops/Makefile logs`
+- `make -f game-v2/ops/Makefile health`
 
-## Live site
-- `https://mycatur.envyst.asia`
+## Notes
+- Keep active implementation under `game-v2/`
+- Root `README.md` remains intentionally minimal
+- Do not put the live URL into repo docs outside the allowed rootless chat updates

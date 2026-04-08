@@ -1,7 +1,7 @@
 PROJECT_DIR := $(shell pwd)
 COMPOSE := docker compose -f $(PROJECT_DIR)/game-v2/ops/docker-compose.yml
 
-.PHONY: help up down restart redeploy ps logs db-logs build deploy nginx-sync-pre-certbot nginx-test-reload
+.PHONY: help up down restart redeploy ps logs db-logs build deploy nginx-sync-pre-certbot nginx-test-reload health
 
 help:
 	@echo "mycatur commands:"
@@ -16,6 +16,7 @@ help:
 	@echo "  make deploy                 # build + recreate containers"
 	@echo "  make nginx-sync-pre-certbot # install nginx config for mycatur.envyst.asia"
 	@echo "  make nginx-test-reload      # nginx -t && systemctl reload nginx"
+	@echo "  make health                 # curl local app health endpoint"
 
 up:
 	@cd $(PROJECT_DIR) && $(COMPOSE) up -d
@@ -50,3 +51,6 @@ nginx-sync-pre-certbot:
 nginx-test-reload:
 	@nginx -t
 	@systemctl reload nginx
+
+health:
+	@curl -fsS http://127.0.0.1:8090/api/health && echo
