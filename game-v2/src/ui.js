@@ -23,21 +23,22 @@ export function renderBoard(state, onSquareClick) {
 
   const displayRows = getDisplayRows(state.playerColor);
   const displayCols = getDisplayCols(state.playerColor);
+  const boardToRender = state.replayBoard || state.board;
 
   displayRows.forEach(rowIndex => {
     displayCols.forEach(colIndex => {
-      const piece = state.board[rowIndex][colIndex];
+      const piece = boardToRender[rowIndex][colIndex];
       const square = document.createElement('button');
       square.className = `square ${(rowIndex + colIndex) % 2 === 0 ? 'light' : 'dark'}`;
       square.type = 'button';
       square.dataset.row = rowIndex;
       square.dataset.col = colIndex;
 
-      if (selected && selected.row === rowIndex && selected.col === colIndex) {
+      if (!state.replayBoard && selected && selected.row === rowIndex && selected.col === colIndex) {
         square.classList.add('selected');
       }
 
-      if (validTargets.includes(`${rowIndex}:${colIndex}`)) {
+      if (!state.replayBoard && validTargets.includes(`${rowIndex}:${colIndex}`)) {
         square.classList.add('target');
       }
 
@@ -59,7 +60,12 @@ export function renderStatus(state) {
   const statusEl = document.getElementById('status');
 
   if (!state.started) {
-    statusEl.textContent = 'Press Start Game to begin.';
+    statusEl.textContent = 'Login and load or create a session, then start game.';
+    return;
+  }
+
+  if (state.replayBoard) {
+    statusEl.textContent = `Replay mode | Step ${state.replayIndex}/${state.replayStates.length - 1}`;
     return;
   }
 
@@ -73,12 +79,19 @@ export function renderStatus(state) {
     return;
   }
 
-  const modeLabel = state.mode === 'human-vs-engine' ? 'Human vs Engine' : 'Human vs Human';
+  if (state.isDraw) {
+    statusEl.textContent = state.statusMessage || 'Draw.';
+    return;
+  }
+
+  const sessionBit = state.sessionId ? ` | Session: ${state.sessionId.slice(0, 8)}` : '';
+  const readOnlyBit = state.readOnly ? ' | Read-only history view' : '';
+  const modeLabel = state.mode === 'human-vs-ai' ? 'Human vs AI' : 'Human vs Human';
   const extra = state.statusMessage ? ` | ${state.statusMessage}` : '';
-  statusEl.textContent = `Mode: ${modeLabel} | Current turn: ${state.currentTurn}${extra}`;
+  statusEl.textContent = `Mode: ${modeLabel} | Current turn: ${state.currentTurn}${extra}${sessionBit}${readOnlyBit}`;
 }
 
-export function renderMoveLog(state) {
+export function renderMoveLog(state, onJumpToMove) {
   const logEl = document.getElementById('moveLog');
   logEl.innerHTML = '';
 
@@ -91,9 +104,17 @@ export function renderMoveLog(state) {
   }
 
   state.moveLog.forEach((entry, index) => {
-    const item = document.createElement('div');
+    const item = document.createElement('button');
+    item.type = 'button';
     item.className = 'log-entry';
-    item.textContent = `${index + 1}. ${entry}`;
+    item.style.textAlign = 'left';
+    item.style.border = 'none';
+    item.style.width = '100%';
+    if (state.replayBoard && state.replayIndex === index + 1) {
+      item.style.outline = '2px solid rgba(110, 168, 254, 0.55)';
+    }
+    item.textContent = entry;
+    item.addEventListener('click', () => onJumpToMove(index + 1));
     logEl.appendChild(item);
   });
 }
@@ -114,7 +135,7 @@ export function renderPromotionControls(state, onPromote) {
 
   const choicesEl = document.getElementById('promotionChoices');
 
-  if (!state.pendingPromotion) {
+  if (!state.pendingPromotion || state.readOnly || state.replayBoard) {
     section.style.display = 'none';
     choicesEl.innerHTML = '';
     return;
@@ -133,14 +154,104 @@ export function renderPromotionControls(state, onPromote) {
   });
 }
 
-export function bindControls({ onReset, onModeChange, onPlayerColorChange, onStart }) {
+export function renderReplayControls(state) {
+  const replayStatus = document.getElementById('replayStatus');
+  const disabled = !state.replayStates.length;
+  document.getElementById('replayStartButton').disabled = disabled;
+  document.getElementById('replayPrevButton').disabled = disabled;
+  document.getElementById('replayNextButton').disabled = disabled;
+  document.getElementById('replayEndButton').disabled = disabled;
+  replayStatus.textContent = disabled
+    ? 'Load a saved session to replay moves.'
+    : `Replay step ${state.replayIndex}/${state.replayStates.length - 1}`;
+}
+
+export function bindControls({ onReset, onModeChange, onPlayerColorChange, onStart, onLogin, onLogout, onCreateSession, onReplayStart, onReplayPrev, onReplayNext, onReplayEnd }) {
   document.getElementById('resetButton').addEventListener('click', onReset);
   document.getElementById('startButton').addEventListener('click', onStart);
   document.getElementById('modeSelect').addEventListener('change', event => onModeChange(event.target.value));
   document.getElementById('playerColorSelect').addEventListener('change', event => onPlayerColorChange(event.target.value));
+  document.getElementById('loginButton').addEventListener('click', onLogin);
+  document.getElementById('logoutButton').addEventListener('click', onLogout);
+  document.getElementById('newSessionButton').addEventListener('click', onCreateSession);
+  document.getElementById('replayStartButton').addEventListener('click', onReplayStart);
+  document.getElementById('replayPrevButton').addEventListener('click', onReplayPrev);
+  document.getElementById('replayNextButton').addEventListener('click', onReplayNext);
+  document.getElementById('replayEndButton').addEventListener('click', onReplayEnd);
+}
+
+export function renderAuth(user, error = '') {
+  const loginForm = document.getElementById('loginForm');
+  const userPanel = document.getElementById('userPanel');
+  const authState = document.getElementById('authState');
+  const currentUser = document.getElementById('currentUser');
+  const loginError = document.getElementById('loginError');
+
+  if (user) {
+    loginForm.style.display = 'none';
+    userPanel.style.display = 'block';
+    authState.textContent = 'Authenticated';
+    currentUser.textContent = `${user.displayName} (@${user.username})`;
+    loginError.textContent = '';
+  } else {
+    loginForm.style.display = 'flex';
+    userPanel.style.display = 'none';
+    authState.textContent = 'Please log in';
+    currentUser.textContent = '';
+    loginError.textContent = error;
+  }
+}
+
+export function renderSessions(sessions, onOpenSession) {
+  const listEl = document.getElementById('sessionList');
+  listEl.innerHTML = '';
+
+  if (!sessions.length) {
+    const empty = document.createElement('div');
+    empty.className = 'item';
+    empty.textContent = 'No saved sessions yet.';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  sessions.forEach(session => {
+    const item = document.createElement('div');
+    item.className = 'item';
+    const title = document.createElement('div');
+    title.className = 'item-title';
+    title.textContent = `${session.mode} • ${session.status}`;
+    const meta = document.createElement('div');
+    meta.className = 'item-meta';
+    meta.textContent = `Result: ${session.result || '-'} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
+    const actions = document.createElement('div');
+    actions.className = 'inline-actions';
+    const button = document.createElement('button');
+    button.className = 'secondary';
+    button.textContent = session.status === 'finished' ? 'View / Replay' : 'Open';
+    button.addEventListener('click', () => onOpenSession(session.id));
+    actions.appendChild(button);
+    item.appendChild(title);
+    item.appendChild(meta);
+    item.appendChild(actions);
+    listEl.appendChild(item);
+  });
 }
 
 export function syncControls(state) {
   document.getElementById('modeSelect').value = state.mode;
   document.getElementById('playerColorSelect').value = state.playerColor;
+}
+
+export function getLoginFormValues() {
+  return {
+    username: document.getElementById('usernameInput').value.trim(),
+    password: document.getElementById('passwordInput').value,
+  };
+}
+
+export function getNewSessionValues() {
+  return {
+    mode: document.getElementById('newSessionModeSelect').value,
+    side: document.getElementById('newSessionSideSelect').value,
+  };
 }

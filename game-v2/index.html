@@ -17,6 +17,7 @@
       --highlight: rgba(110, 168, 254, 0.35);
       --ok: #73e2a7;
       --warn: #fbbf24;
+      --danger: #ff7b7b;
     }
 
     * { box-sizing: border-box; }
@@ -28,11 +29,11 @@
     }
 
     .app {
-      max-width: 1320px;
+      max-width: 1500px;
       margin: 0 auto;
       padding: 24px;
       display: grid;
-      grid-template-columns: 1fr 360px;
+      grid-template-columns: 300px 1fr 380px;
       gap: 24px;
       min-height: 100vh;
     }
@@ -45,8 +46,18 @@
       border: 1px solid rgba(255,255,255,0.06);
     }
 
+    .side-panel, .sidebar {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
     .board-wrap {
       padding: 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
     }
 
     .board {
@@ -100,20 +111,8 @@
       text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
     }
 
-    .piece.white-piece {
-      color: #ffffff;
-    }
-
-    .piece.black-piece {
-      color: #000000;
-    }
-
-    .sidebar {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
+    .piece.white-piece { color: #ffffff; }
+    .piece.black-piece { color: #000000; }
 
     .section {
       background: var(--panel-2);
@@ -121,9 +120,10 @@
       padding: 16px;
     }
 
-    h1, h2, p { margin: 0; }
+    h1, h2, h3, p { margin: 0; }
     h1 { font-size: 26px; margin-bottom: 8px; }
     h2 { font-size: 16px; margin-bottom: 10px; }
+    h3 { font-size: 13px; margin-bottom: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
     .muted { color: var(--muted); }
 
     .controls {
@@ -132,7 +132,13 @@
       gap: 10px;
     }
 
-    button, select {
+    .inline-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button, select, input {
       border: none;
       border-radius: 10px;
       padding: 10px 12px;
@@ -151,7 +157,12 @@
       color: var(--text);
     }
 
-    select {
+    button.danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    select, input {
       width: 100%;
       background: #fff;
       color: #111;
@@ -163,8 +174,8 @@
       line-height: 1.5;
     }
 
-    .log {
-      max-height: 240px;
+    .list, .log {
+      max-height: 320px;
       overflow: auto;
       display: flex;
       flex-direction: column;
@@ -172,10 +183,30 @@
       font-size: 14px;
     }
 
-    .log-entry {
-      padding: 8px 10px;
+    .log { max-height: 240px; }
+
+    .item, .log-entry {
+      padding: 10px;
       background: rgba(255,255,255,0.05);
-      border-radius: 8px;
+      border-radius: 10px;
+    }
+
+    .item-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .item-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .inline-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
     }
 
     .badge {
@@ -193,23 +224,14 @@
       color: var(--warn);
     }
 
-    @media (max-width: 960px) {
+    .error {
+      color: var(--danger);
+      font-size: 13px;
+    }
+
+    @media (max-width: 1200px) {
       .app {
         grid-template-columns: 1fr;
-        padding: 14px;
-        gap: 16px;
-      }
-
-      .board-wrap {
-        padding: 14px;
-      }
-
-      .board {
-        width: min(100%, calc(100vw - 32px));
-      }
-
-      .sidebar {
-        padding: 14px;
       }
     }
 
@@ -219,12 +241,8 @@
         gap: 12px;
       }
 
-      .panel,
-      .section {
-        border-radius: 14px;
-      }
-
       .board-wrap,
+      .side-panel,
       .sidebar,
       .section {
         padding: 12px;
@@ -243,7 +261,7 @@
         font-size: 22px;
       }
 
-      button, select {
+      button, select, input {
         min-height: 44px;
       }
     }
@@ -251,29 +269,64 @@
 </head>
 <body>
   <div class="app">
+    <div class="panel side-panel">
+      <div>
+        <h1>Mycatur V2</h1>
+        <p class="muted">Single-user normal chess with persistence and history.</p>
+      </div>
+
+      <div class="section">
+        <h2>Account</h2>
+        <div id="authState"></div>
+        <div id="loginForm" class="controls">
+          <input id="usernameInput" type="text" placeholder="Username" autocomplete="username" />
+          <input id="passwordInput" type="password" placeholder="Password" autocomplete="current-password" />
+          <button id="loginButton">Login</button>
+          <div id="loginError" class="error"></div>
+        </div>
+        <div id="userPanel" style="display:none;">
+          <div id="currentUser" class="status-line"></div>
+          <div class="inline-actions">
+            <button id="logoutButton" class="secondary">Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Sessions</h2>
+        <div class="controls">
+          <select id="newSessionModeSelect">
+            <option value="human-vs-human">Human vs Human</option>
+            <option value="human-vs-ai">Human vs AI</option>
+          </select>
+          <select id="newSessionSideSelect">
+            <option value="white">Play as White</option>
+            <option value="black">Play as Black</option>
+          </select>
+          <button id="newSessionButton">Create New Session</button>
+        </div>
+        <div id="sessionList" class="list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
     <div class="panel board-wrap">
       <div id="board" class="board"></div>
     </div>
 
     <div class="panel sidebar">
-      <div>
-        <h1>Mycatur V2</h1>
-        <p class="muted">Focused on becoming a complete normal chess game first.</p>
-      </div>
-
       <div class="section">
         <h2>Game Controls</h2>
         <div class="controls">
           <select id="modeSelect">
             <option value="human-vs-human">Human vs Human</option>
-            <option value="human-vs-engine">Human vs Engine</option>
+            <option value="human-vs-ai">Human vs AI</option>
           </select>
           <select id="playerColorSelect">
             <option value="white">Play as White</option>
             <option value="black">Play as Black</option>
           </select>
           <button id="startButton">Start Game</button>
-          <button id="resetButton" class="secondary">Reset Game</button>
+          <button id="resetButton" class="secondary">Reset Local Board</button>
         </div>
       </div>
 
@@ -281,14 +334,25 @@
         <h2>Status</h2>
         <div id="status" class="status-line"></div>
         <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-          <span class="badge">Normal chess only</span>
-          <span class="badge warn">Full rules still in progress</span>
+          <span class="badge">Persistence enabled</span>
+          <span class="badge warn">Stockfish later</span>
         </div>
       </div>
 
       <div class="section">
         <h2>Move Log</h2>
         <div id="moveLog" class="log"></div>
+      </div>
+
+      <div class="section">
+        <h2>Replay</h2>
+        <div class="inline-controls">
+          <button id="replayStartButton" class="secondary">|&lt;</button>
+          <button id="replayPrevButton" class="secondary">&lt;</button>
+          <button id="replayNextButton" class="secondary">&gt;</button>
+          <button id="replayEndButton" class="secondary">&gt;|</button>
+        </div>
+        <div id="replayStatus" class="status-line" style="margin-top:10px;"></div>
       </div>
     </div>
   </div>

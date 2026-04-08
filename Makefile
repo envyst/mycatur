@@ -1,6 +1,6 @@
 PROJECT_DIR := $(shell pwd)
 
-.PHONY: help up down restart redeploy ps logs build deploy nginx-sync-pre-certbot nginx-test-reload
+.PHONY: help up down restart redeploy ps logs build deploy nginx-sync-pre-certbot nginx-test-reload db-logs
 
 help:
 	@echo "mycatur commands:"
@@ -9,9 +9,10 @@ help:
 	@echo "  make restart                # docker compose restart"
 	@echo "  make redeploy               # docker compose up -d --build --force-recreate"
 	@echo "  make ps                     # docker compose ps"
-	@echo "  make logs                   # docker compose logs"
+	@echo "  make logs                   # app logs"
+	@echo "  make db-logs                # database logs"
 	@echo "  make build                  # docker compose build"
-	@echo "  make deploy                 # build + recreate container"
+	@echo "  make deploy                 # build + recreate containers"
 	@echo "  make nginx-sync-pre-certbot # install nginx config for mycatur.envyst.asia"
 	@echo "  make nginx-test-reload      # nginx -t && systemctl reload nginx"
 
@@ -31,7 +32,10 @@ ps:
 	@cd $(PROJECT_DIR) && docker compose ps
 
 logs:
-	@cd $(PROJECT_DIR) && docker compose logs --tail=120
+	@cd $(PROJECT_DIR) && docker compose logs --tail=120 mycatur
+
+db-logs:
+	@cd $(PROJECT_DIR) && docker compose logs --tail=120 db
 
 build:
 	@cd $(PROJECT_DIR) && docker compose build

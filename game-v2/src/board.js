@@ -32,6 +32,26 @@ function disableCastlingForRookSquare(castlingRights, color, row, col) {
   if (color === COLORS.BLACK && row === 0 && col === 7) castlingRights.black.kingSide = false;
 }
 
+export function createPositionKey(board, currentTurn, castlingRights, enPassantTarget) {
+  const boardKey = board
+    .map(row => row.map(piece => {
+      if (!piece) return '--';
+      const prefix = piece.color === COLORS.WHITE ? 'w' : 'b';
+      return `${prefix}${piece.type[0]}`;
+    }).join(','))
+    .join('/');
+
+  const castleKey = [
+    castlingRights.white.kingSide ? 'K' : '',
+    castlingRights.white.queenSide ? 'Q' : '',
+    castlingRights.black.kingSide ? 'k' : '',
+    castlingRights.black.queenSide ? 'q' : '',
+  ].join('') || '-';
+
+  const epKey = enPassantTarget ? `${enPassantTarget.row}:${enPassantTarget.col}` : '-';
+  return `${boardKey}|${currentTurn}|${castleKey}|${epKey}`;
+}
+
 export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
   const nextBoard = cloneBoard(board);
   const piece = nextBoard[fromRow][fromCol];
@@ -40,6 +60,8 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
   let nextEnPassantTarget = null;
   let promotion = null;
   let notation = null;
+  let isCapture = Boolean(target);
+  let resetsHalfmoveClock = false;
 
   if (!piece) {
     return {
@@ -48,6 +70,8 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
       enPassantTarget: nextEnPassantTarget,
       promotion,
       notation,
+      isCapture,
+      resetsHalfmoveClock,
     };
   }
 
@@ -68,6 +92,7 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
     const captureRow = piece.color === COLORS.WHITE ? toRow + 1 : toRow - 1;
     nextBoard[captureRow][toCol] = null;
     notation = 'en passant';
+    isCapture = true;
   }
 
   nextBoard[toRow][toCol] = piece;
@@ -100,12 +125,16 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
     };
   }
 
+  resetsHalfmoveClock = piece.type === PIECE_TYPES.PAWN || isCapture;
+
   return {
     board: nextBoard,
     castlingRights: nextCastlingRights,
     enPassantTarget: nextEnPassantTarget,
     promotion,
     notation,
+    isCapture,
+    resetsHalfmoveClock,
   };
 }
 

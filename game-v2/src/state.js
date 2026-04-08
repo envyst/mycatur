@@ -48,5 +48,7 @@ export function createInitialState(options = {}) {
     },
     enPassantTarget: null,
     pendingPromotion: null,
+    halfmoveClock: 0,
+    positionHistory: {},
   };
 }
