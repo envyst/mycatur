@@ -2,33 +2,44 @@ import { COLORS, GAME_MODES } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
 import { createEmptyAssignments } from './specialized.js';
 
-function createBackRank(color) {
+function makePiece(color, type, square) {
+  const prefix = color === COLORS.WHITE ? 'w' : 'b';
+  return {
+    id: `${prefix}-${type}-${square}`,
+    color,
+    type,
+    specialization: null,
+  };
+}
+
+function createBackRank(color, rowLabel) {
   return [
-    { color, type: PIECE_TYPES.ROOK },
-    { color, type: PIECE_TYPES.KNIGHT },
-    { color, type: PIECE_TYPES.BISHOP },
-    { color, type: PIECE_TYPES.QUEEN },
-    { color, type: PIECE_TYPES.KING },
-    { color, type: PIECE_TYPES.BISHOP },
-    { color, type: PIECE_TYPES.KNIGHT },
-    { color, type: PIECE_TYPES.ROOK },
+    makePiece(color, PIECE_TYPES.ROOK, `a${rowLabel}`),
+    makePiece(color, PIECE_TYPES.KNIGHT, `b${rowLabel}`),
+    makePiece(color, PIECE_TYPES.BISHOP, `c${rowLabel}`),
+    makePiece(color, PIECE_TYPES.QUEEN, `d${rowLabel}`),
+    makePiece(color, PIECE_TYPES.KING, `e${rowLabel}`),
+    makePiece(color, PIECE_TYPES.BISHOP, `f${rowLabel}`),
+    makePiece(color, PIECE_TYPES.KNIGHT, `g${rowLabel}`),
+    makePiece(color, PIECE_TYPES.ROOK, `h${rowLabel}`),
   ];
 }
 
-function createPawnRank(color) {
-  return Array.from({ length: 8 }, () => ({ color, type: PIECE_TYPES.PAWN }));
+function createPawnRank(color, rowLabel) {
+  const files = ['a','b','c','d','e','f','g','h'];
+  return files.map(file => makePiece(color, PIECE_TYPES.PAWN, `${file}${rowLabel}`));
 }
 
 export function createInitialBoard() {
   return [
-    createBackRank(COLORS.BLACK),
-    createPawnRank(COLORS.BLACK),
+    createBackRank(COLORS.BLACK, 8),
+    createPawnRank(COLORS.BLACK, 7),
     Array(8).fill(null),
     Array(8).fill(null),
     Array(8).fill(null),
     Array(8).fill(null),
-    createPawnRank(COLORS.WHITE),
-    createBackRank(COLORS.WHITE),
+    createPawnRank(COLORS.WHITE, 2),
+    createBackRank(COLORS.WHITE, 1),
   ];
 }
 

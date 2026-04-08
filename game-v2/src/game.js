@@ -224,6 +224,23 @@ export function createGame() {
     isSpecialized: false,
   };
 
+
+  function applySpecializationsToBoard() {
+    if (!state.isSpecialized) return;
+    const assignments = [...(state.specializedAssignments.white || []), ...(state.specializedAssignments.black || [])].filter(Boolean);
+    assignments.forEach(assignment => {
+      for (let row = 0; row < state.board.length; row += 1) {
+        for (let col = 0; col < state.board[row].length; col += 1) {
+          const piece = state.board[row][col];
+          if (!piece) continue;
+          if (piece.id.endsWith(`-${assignment.square}`)) {
+            state.board[row][col] = { ...piece, specialization: assignment.specialization };
+          }
+        }
+      }
+    });
+  }
+
   function updateGameStatus() {
     const sideToMove = state.currentTurn;
     const inCheck = isKingInCheck(state.board, sideToMove);
@@ -526,6 +543,7 @@ export function createGame() {
       white: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.white?.[i] || null),
       black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
     };
+    applySpecializationsToBoard();
     state.started = true;
     state.pendingPromotion = null;
     state.pendingPromotionMove = null;
@@ -580,6 +598,7 @@ export function createGame() {
       white: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.white?.[i] || null),
       black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
     };
+    applySpecializationsToBoard();
     state.started = true;
     clearSelection();
     if (Object.keys(state.positionHistory).length === 0) {

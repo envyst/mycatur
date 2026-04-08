@@ -1,4 +1,3 @@
-import { getSpecializedPieceAt } from './specialized.js';
 
 export const PIECE_TYPES = {
   KING: 'king',
@@ -28,13 +27,10 @@ export const PIECE_SYMBOLS = {
   },
 };
 
-export function getPieceLabel(piece, row = null, col = null, specializedAssignments = null) {
+export function getPieceLabel(piece) {
   if (!piece) return '';
-  if (specializedAssignments && row !== null && col !== null) {
-    const specialized = getSpecializedPieceAt(specializedAssignments, row, col);
-    if (specialized) {
-      return `${piece.color} ${specialized.specialization}`;
-    }
+  if (piece.specialization) {
+    return `${piece.color} ${piece.specialization}`;
   }
   return `${piece.color} ${piece.type}`;
 }

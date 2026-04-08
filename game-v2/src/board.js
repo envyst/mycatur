@@ -1,6 +1,6 @@
 import { BOARD_SIZE, COLORS } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
-import { getSpecializedRules } from './specialized-effects.js';
+import { getSpecializedRulesFromPiece } from './specialized-effects.js';
 
 export function isInsideBoard(row, col) {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
@@ -23,7 +23,8 @@ export function getPiece(board, row, col) {
 }
 
 function isPromotionSquare(piece, row, gameState, col) {
-  const rules = getSpecializedRules(gameState, row, col);
+  const pieceAtSquare = getPiece(gameState.board, row, col);
+  const rules = getSpecializedRulesFromPiece(pieceAtSquare);
   if (piece.type === PIECE_TYPES.PAWN && rules.canPromote === false) {
     return false;
   }
@@ -180,7 +181,8 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
   if (type === PIECE_TYPES.PAWN) {
     const dir = color === COLORS.WHITE ? -1 : 1;
     const startRow = color === COLORS.WHITE ? 6 : 1;
-    const rules = getSpecializedRules(gameState, row, col);
+    const pieceAtSquare = getPiece(gameState.board, row, col);
+  const rules = getSpecializedRulesFromPiece(pieceAtSquare);
 
     const oneStep = row + dir;
     if (isInsideBoard(oneStep, col) && !getPiece(board, oneStep, col)) {
@@ -198,7 +200,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         const targetCol = col + dc;
         const target = getPiece(board, targetRow, targetCol);
         if (target && target.color !== color) {
-          const targetRules = getSpecializedRules(gameState, targetRow, targetCol);
+          const targetRules = getSpecializedRulesFromPiece(target);
           if (targetRules.canBeCaptured !== false) {
             moves.push({ row: targetRow, col: targetCol });
           }
@@ -232,7 +234,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       if (!target) {
         moves.push({ row: r, col: c });
       } else if (target.color !== color) {
-        const targetRules = getSpecializedRules(gameState, r, c);
+        const targetRules = getSpecializedRulesFromPiece(target);
         if (targetRules.canBeCaptured !== false) {
           moves.push({ row: r, col: c });
         }
@@ -272,7 +274,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       if (!target) {
         moves.push({ row: r, col: c });
       } else if (target.color !== color) {
-        const targetRules = getSpecializedRules(gameState, r, c);
+        const targetRules = getSpecializedRulesFromPiece(target);
         if (targetRules.canBeCaptured !== false) {
           moves.push({ row: r, col: c });
         }

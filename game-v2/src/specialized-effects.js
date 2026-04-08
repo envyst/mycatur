@@ -1,5 +1,3 @@
-import { getSpecializedPieceAt } from './specialized.js';
-
 export const SPECIALIZED_EFFECTS = {
   'Iron Pawn': {
     baseType: 'pawn',
@@ -12,18 +10,16 @@ export const SPECIALIZED_EFFECTS = {
   },
 };
 
-export function getSpecializedDefinition(gameState, row, col) {
-  const assigned = getSpecializedPieceAt(gameState?.specializedAssignments || { white: [], black: [] }, row, col);
-  if (!assigned) return null;
-  const def = SPECIALIZED_EFFECTS[assigned.specialization] || null;
+export function getSpecializedDefinitionFromPiece(piece) {
+  if (!piece?.specialization) return null;
+  const def = SPECIALIZED_EFFECTS[piece.specialization] || null;
   if (!def) return null;
   return {
-    assignment: assigned,
     definition: def,
     rules: def.rules || {},
   };
 }
 
-export function getSpecializedRules(gameState, row, col) {
-  return getSpecializedDefinition(gameState, row, col)?.rules || {};
+export function getSpecializedRulesFromPiece(piece) {
+  return getSpecializedDefinitionFromPiece(piece)?.rules || {};
 }
