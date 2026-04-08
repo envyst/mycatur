@@ -1,5 +1,6 @@
 import { BOARD_SIZE, COLORS } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
+import { isIronPawnAt } from './specialized.js';
 
 export function isInsideBoard(row, col) {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
@@ -21,7 +22,10 @@ export function getPiece(board, row, col) {
   return board[row][col];
 }
 
-function isPromotionSquare(piece, row) {
+function isPromotionSquare(piece, row, gameState, col) {
+  if (piece.type === PIECE_TYPES.PAWN && gameState?.mode === 'specialized' && isIronPawnAt(gameState.specializedAssignments, row, col)) {
+    return false;
+  }
   return piece.type === PIECE_TYPES.PAWN && ((piece.color === COLORS.WHITE && row === 0) || (piece.color === COLORS.BLACK && row === 7));
 }
 
@@ -117,7 +121,7 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
     };
   }
 
-  if (isPromotionSquare(piece, toRow)) {
+  if (isPromotionSquare(piece, toRow, gameState, toCol)) {
     promotion = {
       row: toRow,
       col: toCol,
@@ -138,7 +142,7 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
   };
 }
 
-function collectDirectionalMoves(board, row, col, color, directions) {
+function collectDirectionalMoves(board, row, col, color, directions, gameState) {
   const moves = [];
 
   for (const [dr, dc] of directions) {
@@ -151,7 +155,9 @@ function collectDirectionalMoves(board, row, col, color, directions) {
         moves.push({ row: r, col: c });
       } else {
         if (target.color !== color) {
-          moves.push({ row: r, col: c });
+          if (!(gameState?.mode === 'specialized' && isIronPawnAt(gameState.specializedAssignments, r, c))) {
+            moves.push({ row: r, col: c });
+          }
         }
         break;
       }
@@ -173,6 +179,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
   if (type === PIECE_TYPES.PAWN) {
     const dir = color === COLORS.WHITE ? -1 : 1;
     const startRow = color === COLORS.WHITE ? 6 : 1;
+    const isIronPawn = gameState?.mode === 'specialized' && isIronPawnAt(gameState.specializedAssignments, row, col);
 
     const oneStep = row + dir;
     if (isInsideBoard(oneStep, col) && !getPiece(board, oneStep, col)) {
@@ -184,19 +191,23 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       }
     }
 
-    for (const dc of [-1, 1]) {
-      const targetRow = row + dir;
-      const targetCol = col + dc;
-      const target = getPiece(board, targetRow, targetCol);
-      if (target && target.color !== color) {
-        moves.push({ row: targetRow, col: targetCol });
+    if (!isIronPawn) {
+      for (const dc of [-1, 1]) {
+        const targetRow = row + dir;
+        const targetCol = col + dc;
+        const target = getPiece(board, targetRow, targetCol);
+        if (target && target.color !== color) {
+          if (!(gameState?.mode === 'specialized' && isIronPawnAt(gameState.specializedAssignments, targetRow, targetCol))) {
+            moves.push({ row: targetRow, col: targetCol });
+          }
+        }
       }
-    }
 
-    if (gameState.enPassantTarget) {
-      const ep = gameState.enPassantTarget;
-      if (ep.row === row + dir && Math.abs(ep.col - col) === 1) {
-        moves.push({ row: ep.row, col: ep.col });
+      if (gameState.enPassantTarget) {
+        const ep = gameState.enPassantTarget;
+        if (ep.row === row + dir && Math.abs(ep.col - col) === 1) {
+          moves.push({ row: ep.row, col: ep.col });
+        }
       }
     }
 
@@ -216,7 +227,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       const c = col + dc;
       if (!isInsideBoard(r, c)) continue;
       const target = getPiece(board, r, c);
-      if (!target || target.color !== color) {
+      if (!target || (target.color !== color && !(gameState?.mode === 'specialized' && isIronPawnAt(gameState.specializedAssignments, r, c)))) {
         moves.push({ row: r, col: c });
       }
     }
@@ -225,18 +236,18 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
   }
 
   if (type === PIECE_TYPES.BISHOP) {
-    return collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]]);
+    return collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
   }
 
   if (type === PIECE_TYPES.ROOK) {
-    return collectDirectionalMoves(board, row, col, color, [[-1, 0], [1, 0], [0, -1], [0, 1]]);
+    return collectDirectionalMoves(board, row, col, color, [[-1, 0], [1, 0], [0, -1], [0, 1]], gameState);
   }
 
   if (type === PIECE_TYPES.QUEEN) {
     return collectDirectionalMoves(board, row, col, color, [
       [-1, -1], [-1, 1], [1, -1], [1, 1],
       [-1, 0], [1, 0], [0, -1], [0, 1],
-    ]);
+    ], gameState);
   }
 
   if (type === PIECE_TYPES.KING) {
@@ -251,7 +262,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       const c = col + dc;
       if (!isInsideBoard(r, c)) continue;
       const target = getPiece(board, r, c);
-      if (!target || target.color !== color) {
+      if (!target || (target.color !== color && !(gameState?.mode === 'specialized' && isIronPawnAt(gameState.specializedAssignments, r, c)))) {
         moves.push({ row: r, col: c });
       }
     }
@@ -314,7 +325,7 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor) {
         continue;
       }
 
-      const moves = getPseudoLegalMoves(board, row, col, { castlingRights: null, enPassantTarget: null });
+      const moves = getPseudoLegalMoves(board, row, col, { castlingRights: null, enPassantTarget: null, specializedAssignments: null, mode: 'human-vs-human' });
       if (moves.some(move => move.row === targetRow && move.col === targetCol)) {
         return true;
       }

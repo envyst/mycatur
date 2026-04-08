@@ -99,3 +99,35 @@ export function setAssignment(assignments, side, square, pieceType, specializati
     [side]: [...filtered, { square, pieceType, specialization }],
   };
 }
+
+function filesIndex(file) {
+  return 'abcdefgh'.indexOf(file);
+}
+
+export function squareToCoords(square) {
+  return {
+    row: 8 - Number(square[1]),
+    col: filesIndex(square[0]),
+  };
+}
+
+export function buildSpecializedBoardMap(assignments) {
+  const map = {};
+  ['white', 'black'].forEach(side => {
+    (assignments[side] || []).forEach(item => {
+      const { row, col } = squareToCoords(item.square);
+      map[`${row}:${col}`] = item;
+    });
+  });
+  return map;
+}
+
+export function getSpecializedPieceAt(assignments, row, col) {
+  const map = buildSpecializedBoardMap(assignments);
+  return map[`${row}:${col}`] || null;
+}
+
+export function isIronPawnAt(assignments, row, col) {
+  const item = getSpecializedPieceAt(assignments, row, col);
+  return item?.specialization === 'Iron Pawn';
+}
