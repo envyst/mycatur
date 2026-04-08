@@ -17,11 +17,6 @@ function coordLabel(row, col) {
   return `${'abcdefgh'[col]}${8 - row}`;
 }
 
-function getAssignedSpecialization(state, row, col) {
-  const all = [...(state.specializedAssignments?.white || []), ...(state.specializedAssignments?.black || [])].filter(Boolean);
-  const hit = all.find(item => item.square.toLowerCase() === coordLabel(row, col));
-  return hit || null;
-}
 
 export function renderBoardBanner(state) {
   const banner = document.getElementById('boardBanner');
@@ -95,7 +90,7 @@ export function renderBoard(state, onSquareClick) {
       }
 
       if (piece) {
-        const assigned = getAssignedSpecialization(state, rowIndex, colIndex);
+        const assigned = piece?.specialization ? { specialization: piece.specialization } : null;
         const span = document.createElement('span');
         span.className = `piece ${piece.color === 'white' ? 'white-piece' : 'black-piece'}`;
         span.textContent = getPieceSymbol(piece);
