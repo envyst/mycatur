@@ -315,11 +315,33 @@ export function createGame() {
 
   function updateGameStatus() {
     if (state.isSandbox) {
-      state.checkColor = null;
+      const sideToMove = state.currentTurn;
+      const inCheck = isKingInCheck(state.board, sideToMove);
+      const hasMove = hasAnyLegalMove(state.board, sideToMove, state);
+      const currentPositionKey = createPositionKey(state.board, state.currentTurn, state.castlingRights, state.enPassantTarget);
+      state.checkColor = inCheck ? sideToMove : null;
       state.winner = null;
       state.isDraw = false;
-      state.pendingPromotion = null;
-      if (!state.statusMessage) state.statusMessage = 'Sandbox mode active.';
+      if (inCheck && !hasMove) {
+        state.winner = getOpponentColor(sideToMove);
+        state.statusMessage = `${sideToMove} is checkmated.`;
+        return;
+      }
+      if (!inCheck && !hasMove) {
+        state.isDraw = true;
+        state.statusMessage = 'Draw by stalemate.';
+        return;
+      }
+      if (state.positionHistory[currentPositionKey] >= 3) {
+        state.isDraw = true;
+        state.statusMessage = 'Draw by threefold repetition.';
+        return;
+      }
+      if (inCheck) {
+        state.statusMessage = `${sideToMove} is in check.`;
+      } else if (!state.statusMessage) {
+        state.statusMessage = 'Sandbox mode active.';
+      }
       return;
     }
     const sideToMove = state.currentTurn;
