@@ -157,19 +157,22 @@ export function renderSpecializedSetup(state, onAssign) {
     section.className = 'item';
     const title = document.createElement('div');
     title.className = 'item-title';
-    title.textContent = `${side.toUpperCase()} assignments (${state.specializedAssignments[side].length}/6)`;
+    const count = (state.specializedAssignments?.[side] || []).filter(Boolean).length;
+    title.textContent = `${side.toUpperCase()} assignments (${count}/6)`;
     section.appendChild(title);
 
     for (let i = 0; i < 6; i += 1) {
-      const current = state.specializedAssignments[side][i] || null;
+      const current = state.specializedAssignments?.[side]?.[i] || null;
       const row = document.createElement('div');
       row.className = 'inline-controls';
       row.style.marginTop = '8px';
+      row.style.alignItems = 'center';
 
       const specSelect = document.createElement('select');
+      specSelect.style.flex = '1';
       const specEmpty = document.createElement('option');
       specEmpty.value = '';
-      specEmpty.textContent = 'Select specialized piece';
+      specEmpty.textContent = 'Specialized piece';
       specSelect.appendChild(specEmpty);
       Object.entries(SPECIALIZED_CATALOG).forEach(([pieceType, names]) => {
         names.forEach(name => {
@@ -183,15 +186,20 @@ export function renderSpecializedSetup(state, onAssign) {
         });
       });
 
+      const arrow = document.createElement('div');
+      arrow.className = 'item-meta';
+      arrow.textContent = '→';
+      arrow.style.padding = '0 4px';
+
       const pieceSelect = document.createElement('select');
+      pieceSelect.style.flex = '1';
       const pieceEmpty = document.createElement('option');
       pieceEmpty.value = '';
-      pieceEmpty.textContent = 'Assign to piece';
+      pieceEmpty.textContent = 'Assigned piece';
       pieceSelect.appendChild(pieceEmpty);
 
-      const selectedSpec = specSelect.value ? specSelect.value.split('::') : null;
-      const selectedType = current?.pieceType || selectedSpec?.[0] || null;
-      const selectedName = current?.specialization || selectedSpec?.[1] || '';
+      const selectedValue = specSelect.value;
+      const selectedType = selectedValue ? selectedValue.split('::')[0] : current?.pieceType || null;
       if (selectedType) {
         (SPECIALIZED_STARTING_SQUARES[side][selectedType] || []).forEach(square => {
           const opt = document.createElement('option');
@@ -222,6 +230,7 @@ export function renderSpecializedSetup(state, onAssign) {
       });
 
       row.appendChild(specSelect);
+      row.appendChild(arrow);
       row.appendChild(pieceSelect);
       section.appendChild(row);
     }
@@ -426,6 +435,7 @@ export function syncControls(state) {
   document.getElementById('modeSelect').value = state.mode;
   document.getElementById('playerColorSelect').value = state.playerColor;
   document.getElementById('rulesetSpecializedToggle').checked = Boolean(state.isSpecialized);
+  document.getElementById('newSessionSpecializedToggle').checked = Boolean(state.isSpecialized);
 }
 
 export function getLoginFormValues() {

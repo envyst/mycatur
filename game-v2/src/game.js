@@ -515,7 +515,7 @@ export function createGame() {
     state.halfmoveClock = sessionRow.halfmove_clock;
     state.fullmoveNumber = sessionRow.fullmove_number;
     state.positionHistory = sessionRow.position_history_json || {};
-    state.specializedAssignments = sessionRow.specialized_assignments_json || createEmptyAssignments();
+    state.specializedAssignments = sessionRow.specialized_assignments_json || { white: Array(6).fill(null), black: Array(6).fill(null) };
     state.moveHistory = moves.map(move => move.san);
     state.moveLog = state.moveHistory.map((san, index) => formatMoveEntry(index, san));
     state.started = true;
@@ -562,7 +562,7 @@ export function createGame() {
       engine: createEngine(),
       aiThinking: false,
       isSpecialized: state.isSpecialized,
-      specializedAssignments: createEmptyAssignments(),
+      specializedAssignments: { white: Array(6).fill(null), black: Array(6).fill(null) },
     };
     redraw();
   }
@@ -580,19 +580,36 @@ export function createGame() {
 
 
 
+  function normalizeAssignmentSlots(assignments) {
+    const out = {
+      white: Array.from({ length: 6 }, (_, i) => assignments.white?.[i] || null),
+      black: Array.from({ length: 6 }, (_, i) => assignments.black?.[i] || null),
+    };
+    return out;
+  }
+
   function handleSpecializedAssignment(side, index, assignment) {
-    const next = structuredClone(state.specializedAssignments || createEmptyAssignments());
-    if (!assignment || !assignment.square || !assignment.specialization) {
+    const next = normalizeAssignmentSlots(state.specializedAssignments || createEmptyAssignments());
+    if (!assignment) {
       next[side][index] = null;
-    } else {
+      state.specializedAssignments = next;
+      redraw();
+      return;
+    }
+
+    if (assignment.square) {
       const duplicate = next[side].some((item, idx) => idx !== index && item && item.square === assignment.square);
       if (duplicate) {
         redraw();
         return;
       }
-      next[side][index] = assignment;
     }
-    next[side] = next[side].filter(Boolean).slice(0, 6);
+
+    next[side][index] = {
+      pieceType: assignment.pieceType,
+      specialization: assignment.specialization,
+      square: assignment.square || '',
+    };
     state.specializedAssignments = next;
     redraw();
   }
