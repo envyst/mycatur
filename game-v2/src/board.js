@@ -1,6 +1,6 @@
 import { BOARD_SIZE, COLORS } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
-import { getSpecializedRulesFromPiece } from './specialized-effects.js';
+import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk } from './specialized-effects.js';
 
 export function isInsideBoard(row, col) {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
@@ -145,6 +145,9 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
 
 function collectDirectionalMoves(board, row, col, color, directions, gameState) {
   const moves = [];
+
+  const movingPiece = getPiece(board, row, col);
+  const movingRules = getSpecializedRulesFromPiece(movingPiece);
 
   for (const [dr, dc] of directions) {
     let r = row + dr;
@@ -367,6 +370,7 @@ function isCastlingMove(piece, fromCol, toCol) {
 export function getLegalMoves(board, row, col, gameState) {
   const piece = getPiece(board, row, col);
   if (!piece) return [];
+  if (gameState?.isSpecialized && pieceHasParalysisFromBasilisk(board, gameState, row, col)) return [];
 
   const pseudoMoves = getPseudoLegalMoves(board, row, col, gameState);
   return pseudoMoves.filter(move => {
