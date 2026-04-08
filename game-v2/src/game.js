@@ -1,7 +1,7 @@
 import { COLORS, GAME_MODES } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
 import { createInitialState } from './state.js';
-import { getPiece, getLegalMoves, applyMove, isKingInCheck, hasAnyLegalMove, createPositionKey } from './board.js';
+import { getPiece, getLegalMoves, applyMove, isKingInCheck, hasAnyLegalMove, createPositionKey, findKing } from './board.js';
 import {
   renderBoard,
   renderBoardBanner,
@@ -13,6 +13,7 @@ import {
   renderAuth,
   renderSessions,
   renderSpecializedSetup,
+  renderSandboxControls,
   renderReplayControls,
   getLoginFormValues,
   getNewSessionValues,
@@ -26,8 +27,7 @@ function sameSquare(a, b) {
 }
 
 function toChessCoord(row, col) {
-  const files = 'abcdefgh';
-  return `${files[col]}${8 - row}`;
+  return `${'abcdefgh'[col]}${8 - row}`;
 }
 
 function fileLetter(col) {
@@ -51,22 +51,8 @@ function getOpponentColor(color) {
   return color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
 }
 
-function getRemainingMaterial(board) {
-  const pieces = [];
-  board.forEach(row => row.forEach(piece => { if (piece) pieces.push(piece); }));
-  return pieces;
-}
-
-function isInsufficientMaterial(board) {
-  const nonKings = getRemainingMaterial(board).filter(piece => piece.type !== PIECE_TYPES.KING);
-  if (nonKings.length === 0) return true;
-  if (nonKings.length === 1) {
-    return [PIECE_TYPES.BISHOP, PIECE_TYPES.KNIGHT].includes(nonKings[0].type);
-  }
-  if (nonKings.length === 2 && nonKings.every(piece => piece.type === PIECE_TYPES.BISHOP)) {
-    return true;
-  }
-  return false;
+function cloneBoardState(board) {
+  return board.map(row => row.map(piece => (piece ? { ...piece } : null)));
 }
 
 function incrementPositionHistory(state) {
@@ -97,7 +83,7 @@ function buildPgnText(moveEntries) {
 function buildSessionPayload(state, move = null) {
   return {
     name: state.sessionName || null,
-    ruleset: state.isSpecialized ? 'specialized' : 'normal',
+    ruleset: state.isSandbox ? 'sandbox' : state.isSpecialized ? 'specialized' : 'normal',
     specializedAssignments: state.specializedAssignments,
     status: state.winner || state.isDraw ? 'finished' : 'active',
     result: inferResult(state),
@@ -138,68 +124,27 @@ function buildDisambiguation(board, piece, from, to, gameState) {
   if (piece.type === PIECE_TYPES.PAWN || piece.type === PIECE_TYPES.KING) return '';
   const matches = countSameTypeAttackers(board, piece, to, from, gameState);
   if (!matches.length) return '';
-
   const sameFile = matches.some(match => match.col === from.col);
   const sameRank = matches.some(match => match.row === from.row);
-
   if (!sameFile) return fileLetter(from.col);
   if (!sameRank) return rankNumber(from.row);
   return `${fileLetter(from.col)}${rankNumber(from.row)}`;
 }
 
 function buildSan(piece, from, to, applied, capturedPiece, promotionPiece = null, boardBefore = null, gameState = null, boardAfter = null, nextTurn = null) {
-  if (applied.notation === 'castle kingside') {
-    let san = 'O-O';
-    if (boardAfter && nextTurn) {
-      const inCheck = isKingInCheck(boardAfter, nextTurn);
-      const hasMove = hasAnyLegalMove(boardAfter, nextTurn, { ...gameState, board: boardAfter, currentTurn: nextTurn, enPassantTarget: applied.enPassantTarget, castlingRights: applied.castlingRights });
-      if (inCheck && !hasMove) san += '#';
-      else if (inCheck) san += '+';
-    }
-    return san;
-  }
-  if (applied.notation === 'castle queenside') {
-    let san = 'O-O-O';
-    if (boardAfter && nextTurn) {
-      const inCheck = isKingInCheck(boardAfter, nextTurn);
-      const hasMove = hasAnyLegalMove(boardAfter, nextTurn, { ...gameState, board: boardAfter, currentTurn: nextTurn, enPassantTarget: applied.enPassantTarget, castlingRights: applied.castlingRights });
-      if (inCheck && !hasMove) san += '#';
-      else if (inCheck) san += '+';
-    }
-    return san;
-  }
-
+  if (applied.notation === 'castle kingside') return 'O-O';
+  if (applied.notation === 'castle queenside') return 'O-O-O';
   const destination = toChessCoord(to.row, to.col);
   const capture = capturedPiece || applied.isCapture;
   const prefix = piece.type === PIECE_TYPES.PAWN ? '' : pieceLetter(piece.type);
   const pawnCapturePrefix = piece.type === PIECE_TYPES.PAWN && capture ? fileLetter(from.col) : '';
-  const disambiguation = boardBefore && gameState ? buildDisambiguation(boardBefore, piece, from, to, gameState) : '';
+  const disambiguation = boardBefore && gameState ? buildDisambiguation(boardBefore, piece, to, from, gameState) : '';
   const separator = capture ? 'x' : '';
   const promotionSuffix = promotionPiece ? `=${pieceLetter(promotionPiece)}` : '';
-  let san = `${prefix}${disambiguation}${prefix ? separator : pawnCapturePrefix ? separator : ''}`;
-
   if (piece.type === PIECE_TYPES.PAWN) {
-    san = `${pawnCapturePrefix}${separator}${destination}${promotionSuffix}`;
-    if (!capture) san = `${destination}${promotionSuffix}`;
-  } else {
-    san = `${prefix}${disambiguation}${separator}${destination}${promotionSuffix}`;
+    return capture ? `${pawnCapturePrefix}${separator}${destination}${promotionSuffix}` : `${destination}${promotionSuffix}`;
   }
-
-  if (boardAfter && nextTurn) {
-    const nextState = {
-      ...gameState,
-      board: boardAfter,
-      currentTurn: nextTurn,
-      enPassantTarget: applied.enPassantTarget,
-      castlingRights: applied.castlingRights,
-    };
-    const inCheck = isKingInCheck(boardAfter, nextTurn);
-    const hasMove = hasAnyLegalMove(boardAfter, nextTurn, nextState);
-    if (inCheck && !hasMove) san += '#';
-    else if (inCheck) san += '+';
-  }
-
-  return san;
+  return `${prefix}${disambiguation}${separator}${destination}${promotionSuffix}`;
 }
 
 export function createGame() {
@@ -222,8 +167,14 @@ export function createGame() {
     engine: createEngine(),
     aiThinking: false,
     isSpecialized: false,
+    isSandbox: false,
+    sandboxPendingSummon: null,
   };
 
+  function updateRulesetState(ruleset) {
+    state.isSpecialized = ruleset === 'specialized';
+    state.isSandbox = ruleset === 'sandbox';
+  }
 
   function applySpecializationsToBoard() {
     if (!state.isSpecialized) return;
@@ -233,7 +184,7 @@ export function createGame() {
         for (let col = 0; col < state.board[row].length; col += 1) {
           const piece = state.board[row][col];
           if (!piece) continue;
-          if (piece.id.endsWith(`-${assignment.square}`)) {
+          if (piece.id?.endsWith(`-${assignment.square}`)) {
             state.board[row][col] = { ...piece, specialization: assignment.specialization };
           }
         }
@@ -241,81 +192,115 @@ export function createGame() {
     });
   }
 
-
   function pushSandboxHistorySnapshot() {
     state.sandboxHistory = state.sandboxHistory || [];
     state.sandboxHistory.push({
-      board: state.board.map(row => row.map(piece => (piece ? { ...piece } : null))),
+      board: cloneBoardState(state.board),
       castlingRights: JSON.parse(JSON.stringify(state.castlingRights)),
       enPassantTarget: state.enPassantTarget ? { ...state.enPassantTarget } : null,
       currentTurn: state.currentTurn,
       pendingPromotion: state.pendingPromotion ? { ...state.pendingPromotion } : null,
+      moveHistory: [...state.moveHistory],
+      moveLog: [...state.moveLog],
+      lastMove: state.lastMove ? { from: { ...state.lastMove.from }, to: { ...state.lastMove.to } } : null,
     });
-    if (state.sandboxHistory.length > 100) {
-      state.sandboxHistory.shift();
-    }
+    if (state.sandboxHistory.length > 100) state.sandboxHistory.shift();
   }
 
   function undoSandboxAction() {
     if (!state.isSandbox || !state.sandboxHistory?.length) return false;
     const prev = state.sandboxHistory.pop();
     if (!prev) return false;
-    state.board = prev.board.map(row => row.map(piece => (piece ? { ...piece } : null)));
+    state.board = cloneBoardState(prev.board);
     state.castlingRights = JSON.parse(JSON.stringify(prev.castlingRights));
     state.enPassantTarget = prev.enPassantTarget ? { ...prev.enPassantTarget } : null;
     state.currentTurn = prev.currentTurn;
     state.pendingPromotion = prev.pendingPromotion ? { ...prev.pendingPromotion } : null;
+    state.moveHistory = [...prev.moveHistory];
+    state.moveLog = [...prev.moveLog];
+    state.lastMove = prev.lastMove ? { from: { ...prev.lastMove.from }, to: { ...prev.lastMove.to } } : null;
     state.selectedSquare = null;
     state.validMoves = [];
+    state.statusMessage = 'Sandbox undo applied.';
+    redraw();
     return true;
   }
 
   function sandboxMovePiece(fromRow, fromCol, toRow, toCol) {
-    pushSandboxHistorySnapshot();
     const piece = state.board[fromRow][fromCol];
     if (!piece) return false;
+    pushSandboxHistorySnapshot();
     state.board[toRow][toCol] = piece;
     state.board[fromRow][fromCol] = null;
     state.selectedSquare = null;
     state.validMoves = [];
     state.pendingPromotion = null;
     state.enPassantTarget = null;
+    state.lastMove = { from: { row: fromRow, col: fromCol }, to: { row: toRow, col: toCol } };
+    state.statusMessage = `Sandbox moved ${piece.color} ${piece.type} to ${toChessCoord(toRow, toCol)}.`;
+    redraw();
     return true;
   }
 
   function sandboxDeletePiece(row, col) {
-    if (!state.board[row][col]) return false;
+    const piece = state.board[row][col];
+    if (!piece) return false;
     pushSandboxHistorySnapshot();
     state.board[row][col] = null;
     state.selectedSquare = null;
     state.validMoves = [];
     state.pendingPromotion = null;
     state.enPassantTarget = null;
+    state.statusMessage = `Deleted ${piece.color} ${piece.type} from ${toChessCoord(row, col)}.`;
+    redraw();
     return true;
   }
 
-  function sandboxSummonPiece(row, col, piece) {
+  function makeSandboxPiece(color, type, row, col) {
+    return {
+      id: `sandbox-${color}-${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      color,
+      type,
+      specialization: null,
+    };
+  }
+
+  function sandboxSummonPiece(row, col, color, type) {
     pushSandboxHistorySnapshot();
-    state.board[row][col] = piece;
+    state.board[row][col] = makeSandboxPiece(color, type, row, col);
     state.selectedSquare = null;
     state.validMoves = [];
     state.pendingPromotion = null;
     state.enPassantTarget = null;
+    state.lastMove = null;
+    state.statusMessage = `Summoned ${color} ${type} on ${toChessCoord(row, col)}.`;
+    redraw();
     return true;
   }
 
+  function normalizeAssignmentSlots(assignments) {
+    return {
+      white: Array.from({ length: 6 }, (_, i) => assignments.white?.[i] || null),
+      black: Array.from({ length: 6 }, (_, i) => assignments.black?.[i] || null),
+    };
+  }
+
   function updateGameStatus() {
+    if (state.isSandbox) {
+      state.checkColor = null;
+      state.winner = null;
+      state.isDraw = false;
+      if (!state.statusMessage) state.statusMessage = 'Sandbox mode active.';
+      return;
+    }
     const sideToMove = state.currentTurn;
     const inCheck = isKingInCheck(state.board, sideToMove);
     const hasMove = hasAnyLegalMove(state.board, sideToMove, state);
     const currentPositionKey = createPositionKey(state.board, state.currentTurn, state.castlingRights, state.enPassantTarget);
-    const repetitionCount = state.positionHistory[currentPositionKey] || 0;
-
     state.checkColor = inCheck ? sideToMove : null;
     state.statusMessage = '';
     state.winner = null;
     state.isDraw = false;
-
     if (inCheck && !hasMove) {
       state.winner = getOpponentColor(sideToMove);
       state.statusMessage = `${sideToMove} is checkmated.`;
@@ -326,32 +311,17 @@ export function createGame() {
       state.statusMessage = 'Draw by stalemate.';
       return;
     }
-    if (state.halfmoveClock >= 100) {
-      state.isDraw = true;
-      state.statusMessage = 'Draw by fifty-move rule.';
-      return;
-    }
     if (state.positionHistory[currentPositionKey] >= 3) {
       state.isDraw = true;
       state.statusMessage = 'Draw by threefold repetition.';
       return;
     }
-    if (isInsufficientMaterial(state.board)) {
-      state.isDraw = true;
-      state.statusMessage = 'Draw by insufficient material.';
-      return;
-    }
-    if (inCheck) {
-      state.statusMessage = `${sideToMove} is in check.`;
-    }
+    if (inCheck) state.statusMessage = `${sideToMove} is in check.`;
   }
-
 
   function scrollActiveReplayMoveIntoView() {
     const active = document.querySelector('[data-active-replay-move="true"]');
-    if (active) {
-      active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
+    if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
   function redraw() {
@@ -363,13 +333,16 @@ export function createGame() {
     renderAuth(state.user);
     renderSessions(state.sessions, loadSession, handleDeleteSession, handleRenameSession);
     renderSpecializedSetup(state, handleSpecializedAssignment);
+    renderSandboxControls(state, {
+      onSandboxSummon: handleSandboxSummon,
+      onSandboxDelete: handleSandboxDelete,
+      onSandboxUndo: handleSandboxUndo,
+      onSandboxAskAi: handleSandboxAskAi,
+    });
     renderReplayControls(state);
     syncControls(state);
-    if (state.replayBoard) {
-      setTimeout(scrollActiveReplayMoveIntoView, 0);
-    }
+    if (state.replayBoard) setTimeout(scrollActiveReplayMoveIntoView, 0);
   }
-
 
   function jumpToReplayIndex(index) {
     if (!state.replayStates.length) return;
@@ -391,7 +364,7 @@ export function createGame() {
 
   function setSelection(row, col) {
     state.selectedSquare = { row, col };
-    state.validMoves = getLegalMoves(state.board, row, col, state);
+    state.validMoves = state.isSandbox ? [] : getLegalMoves(state.board, row, col, state);
   }
 
   function clearSelection() {
@@ -405,15 +378,8 @@ export function createGame() {
     await refreshSessions();
   }
 
-  function computeMoveIndex() {
-    return state.moveHistory.length;
-  }
-
   async function finalizeTurn(move = null) {
     state.currentTurn = getOpponentColor(state.currentTurn);
-    if (state.currentTurn === COLORS.WHITE) {
-      state.fullmoveNumber += 1;
-    }
     incrementPositionHistory(state);
     clearSelection();
     updateGameStatus();
@@ -425,102 +391,102 @@ export function createGame() {
     const { row, col } = state.pendingPromotion;
     const piece = state.board[row][col];
     if (!piece || piece.type !== PIECE_TYPES.PAWN) return;
-
     state.board[row][col] = { ...piece, type: pieceType };
-    const nextTurn = getOpponentColor(piece.color);
-    const san = buildSan(
-      { ...piece, type: PIECE_TYPES.PAWN },
-      state.pendingPromotionMove.from,
-      state.pendingPromotionMove.to,
-      state.pendingPromotionMove.applied,
-      state.pendingPromotionMove.capturedPiece,
-      pieceType,
-      state.pendingPromotionMove.boardBefore,
-      state.pendingPromotionMove.gameStateBefore,
-      state.board,
-      nextTurn,
-    );
-    state.moveHistory[state.moveHistory.length - 1] = san;
-    state.moveLog[state.moveLog.length - 1] = formatMoveEntry(state.moveHistory.length - 1, san);
     state.pendingPromotion = null;
-
-    const movePayload = {
-      moveIndex: state.moveHistory.length,
-      side: piece.color,
-      fromSquare: toChessCoord(state.pendingPromotionMove.from.row, state.pendingPromotionMove.from.col),
-      toSquare: toChessCoord(state.pendingPromotionMove.to.row, state.pendingPromotionMove.to.col),
-      piece: 'pawn',
-      promotionPiece: pieceType,
-      san,
-    };
     state.pendingPromotionMove = null;
-    await finalizeTurn(movePayload);
     redraw();
-    maybeDoEngineMove();
   }
 
   async function makeMove(from, to) {
-    const boardBefore = structuredClone(state.board);
-    const gameStateBefore = {
-      board: structuredClone(state.board),
-      currentTurn: state.currentTurn,
-      castlingRights: structuredClone(state.castlingRights),
-      enPassantTarget: state.enPassantTarget ? { ...state.enPassantTarget } : null,
-      halfmoveClock: state.halfmoveClock,
-      fullmoveNumber: state.fullmoveNumber,
-      positionHistory: { ...state.positionHistory },
-    };
+    const boardBefore = cloneBoardState(state.board);
     const piece = getPiece(state.board, from.row, from.col);
     const capturedPiece = getPiece(state.board, to.row, to.col);
     const applied = applyMove(state.board, from.row, from.col, to.row, to.col, state);
-
     state.board = applied.board;
     state.castlingRights = applied.castlingRights;
     state.enPassantTarget = applied.enPassantTarget;
-    state.halfmoveClock = applied.resetsHalfmoveClock ? 0 : state.halfmoveClock + 1;
-
     const nextTurn = getOpponentColor(piece.color);
-    const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, gameStateBefore, state.board, nextTurn);
+    const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, state, state.board, nextTurn);
     state.lastMove = { from, to };
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
-
-    const movePayload = {
-      moveIndex: computeMoveIndex(),
-      side: piece.color,
-      fromSquare: toChessCoord(from.row, from.col),
-      toSquare: toChessCoord(to.row, to.col),
-      piece: piece.type,
-      promotionPiece: applied.promotion ? 'pending' : null,
-      san: provisionalSan,
-    };
-
     if (applied.promotion) {
       state.pendingPromotion = applied.promotion;
-      state.pendingPromotionMove = { from, to, applied, capturedPiece, boardBefore, gameStateBefore };
       clearSelection();
-      await persistState(movePayload);
       redraw();
       return;
     }
+    await finalizeTurn();
+  }
 
-    await finalizeTurn(movePayload);
+  function isSandboxBoardValidForAi() {
+    return Boolean(findKing(state.board, COLORS.WHITE) && findKing(state.board, COLORS.BLACK));
+  }
+
+  async function handleSandboxAskAi() {
+    if (!state.isSandbox || state.mode !== 'human-vs-ai' || state.readOnly || state.replayBoard) return;
+    if (!isSandboxBoardValidForAi()) {
+      state.statusMessage = 'Sandbox AI requires both kings on the board.';
+      redraw();
+      return;
+    }
+    try {
+      state.aiThinking = true;
+      state.statusMessage = 'Sandbox AI is thinking...';
+      redraw();
+      const best = await state.engine.getBestMove(state, { depth: 12 });
+      state.aiThinking = false;
+      if (!best) {
+        state.statusMessage = 'Sandbox AI could not find a move.';
+        redraw();
+        return;
+      }
+      pushSandboxHistorySnapshot();
+      const piece = getPiece(state.board, best.from.row, best.from.col);
+      state.board[best.to.row][best.to.col] = piece;
+      state.board[best.from.row][best.from.col] = null;
+      state.lastMove = { from: best.from, to: best.to };
+      state.currentTurn = getOpponentColor(state.currentTurn);
+      state.statusMessage = `Sandbox AI moved ${piece?.type || 'piece'} to ${toChessCoord(best.to.row, best.to.col)}.`;
+      redraw();
+    } catch (error) {
+      state.aiThinking = false;
+      state.statusMessage = 'Sandbox AI move failed.';
+      redraw();
+      console.error(error);
+    }
+  }
+
+  function handleSandboxDelete() {
+    if (!state.isSandbox || !state.selectedSquare) {
+      state.statusMessage = 'Select a square first to delete.';
+      redraw();
+      return;
+    }
+    sandboxDeletePiece(state.selectedSquare.row, state.selectedSquare.col);
+  }
+
+  function handleSandboxUndo() {
+    if (!undoSandboxAction()) {
+      state.statusMessage = 'Nothing to undo.';
+      redraw();
+    }
+  }
+
+  function handleSandboxSummon(color, type) {
+    if (!state.isSandbox || !state.selectedSquare) {
+      state.statusMessage = 'Select a square first to summon a piece.';
+      redraw();
+      return;
+    }
+    sandboxSummonPiece(state.selectedSquare.row, state.selectedSquare.col, color, type);
   }
 
   async function maybeDoEngineMove() {
+    if (state.isSandbox) return;
     if (!state.started || state.winner || state.pendingPromotion || state.isDraw || state.readOnly) return;
     if (state.mode !== 'human-vs-ai') return;
     if (state.currentTurn === state.playerColor) return;
-
-    document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
-      state.isSpecialized = event.target.checked;
-      redraw();
-    });
-    document.getElementById('newSessionSpecializedToggle').addEventListener('change', event => {
-      state.isSpecialized = event.target.checked;
-      redraw();
-    });
-
     try {
       state.aiThinking = true;
       state.statusMessage = 'AI is thinking...';
@@ -533,28 +499,43 @@ export function createGame() {
         return;
       }
       await makeMove(best.from, best.to);
-      if (state.pendingPromotion) {
-        const promoMap = { q: PIECE_TYPES.QUEEN, r: PIECE_TYPES.ROOK, b: PIECE_TYPES.BISHOP, n: PIECE_TYPES.KNIGHT };
-        await handlePromotion(promoMap[best.promotion] || PIECE_TYPES.QUEEN);
-        state.aiThinking = false;
-        return;
-      }
       state.aiThinking = false;
       redraw();
     } catch (error) {
       state.aiThinking = false;
       state.statusMessage = 'AI move failed. Please try again.';
       redraw();
-      console.error('Engine move failed', error);
+      console.error(error);
     }
   }
 
   async function handleSquareClick(row, col) {
-    if (!state.started || state.winner || state.pendingPromotion || state.isDraw || state.readOnly || state.replayBoard || state.aiThinking) return;
+    if (!state.started || state.readOnly || state.replayBoard || state.aiThinking) return;
+
+    if (state.isSandbox) {
+      const piece = getPiece(state.board, row, col);
+      if (state.selectedSquare && !sameSquare(state.selectedSquare, { row, col })) {
+        const selectedPiece = getPiece(state.board, state.selectedSquare.row, state.selectedSquare.col);
+        if (selectedPiece) {
+          sandboxMovePiece(state.selectedSquare.row, state.selectedSquare.col, row, col);
+          return;
+        }
+      }
+      if (piece) {
+        state.selectedSquare = { row, col };
+        state.statusMessage = `Selected ${piece.color} ${piece.type} on ${toChessCoord(row, col)}.`;
+      } else {
+        state.selectedSquare = { row, col };
+        state.statusMessage = `Selected empty square ${toChessCoord(row, col)}.`;
+      }
+      redraw();
+      return;
+    }
+
+    if (state.winner || state.pendingPromotion || state.isDraw) return;
     if (state.mode === 'human-vs-ai' && state.currentTurn !== state.playerColor) return;
 
     const piece = getPiece(state.board, row, col);
-
     if (state.selectedSquare) {
       const isTarget = state.validMoves.some(move => move.row === row && move.col === col);
       if (isTarget) {
@@ -575,15 +556,13 @@ export function createGame() {
     } else {
       clearSelection();
     }
-
     redraw();
   }
 
   function applySessionRow(sessionRow, moves = []) {
-    if (!state.engine) state.engine = createEngine();
     state.sessionId = sessionRow.id;
     state.mode = sessionRow.mode === 'human-vs-ai' ? 'human-vs-ai' : GAME_MODES.HUMAN_VS_HUMAN;
-    state.isSpecialized = sessionRow.ruleset === 'specialized';
+    updateRulesetState(sessionRow.ruleset || 'normal');
     if (state.user) {
       if (sessionRow.white_user_id === state.user.id) state.playerColor = 'white';
       else if (sessionRow.black_user_id === state.user.id) state.playerColor = 'black';
@@ -596,22 +575,13 @@ export function createGame() {
     state.fullmoveNumber = sessionRow.fullmove_number;
     state.positionHistory = sessionRow.position_history_json || {};
     const loadedAssignments = sessionRow.specialized_assignments_json || createEmptyAssignments();
-    state.specializedAssignments = {
-      white: Array.from({ length: 6 }, (_, i) => loadedAssignments.white?.[i] || null),
-      black: Array.from({ length: 6 }, (_, i) => loadedAssignments.black?.[i] || null),
-    };
+    state.specializedAssignments = normalizeAssignmentSlots(loadedAssignments);
     state.moveHistory = moves.map(move => move.san);
     state.moveLog = state.moveHistory.map((san, index) => formatMoveEntry(index, san));
-    state.specializedAssignments = {
-      white: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.white?.[i] || null),
-      black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
-    };
     applySpecializationsToBoard();
-    state.isSandbox = state.ruleset === 'sandbox';
     state.started = true;
     state.pendingPromotion = null;
     state.pendingPromotionMove = null;
-    state.lastMove = moves.length ? { from: null, to: null } : null;
     state.readOnly = sessionRow.status === 'finished';
     state.winner = null;
     state.isDraw = false;
@@ -633,8 +603,9 @@ export function createGame() {
   function resetLocal(mode = state.mode, playerColor = state.playerColor) {
     const preservedUser = state.user;
     const preservedSessions = state.sessions;
+    const next = createInitialState({ mode, playerColor });
     state = {
-      ...createInitialState({ mode, playerColor }),
+      ...next,
       validMoves: [],
       checkColor: null,
       statusMessage: '',
@@ -652,36 +623,25 @@ export function createGame() {
       engine: createEngine(),
       aiThinking: false,
       isSpecialized: state.isSpecialized,
+      isSandbox: state.isSandbox,
       specializedAssignments: { white: Array(6).fill(null), black: Array(6).fill(null) },
+      sandboxHistory: [],
     };
     redraw();
   }
 
   async function startGame() {
-    state.specializedAssignments = {
-      white: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.white?.[i] || null),
-      black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
-    };
-    applySpecializationsToBoard();
-    state.isSandbox = state.ruleset === 'sandbox';
+    state.specializedAssignments = normalizeAssignmentSlots(state.specializedAssignments || createEmptyAssignments());
     state.started = true;
+    state.statusMessage = '';
+    applySpecializationsToBoard();
     clearSelection();
-    if (Object.keys(state.positionHistory).length === 0) {
+    if (!state.isSandbox && Object.keys(state.positionHistory).length === 0) {
       incrementPositionHistory(state);
     }
     updateGameStatus();
     redraw();
     maybeDoEngineMove();
-  }
-
-
-
-  function normalizeAssignmentSlots(assignments) {
-    const out = {
-      white: Array.from({ length: 6 }, (_, i) => assignments.white?.[i] || null),
-      black: Array.from({ length: 6 }, (_, i) => assignments.black?.[i] || null),
-    };
-    return out;
   }
 
   function handleSpecializedAssignment(side, index, assignment) {
@@ -692,7 +652,6 @@ export function createGame() {
       redraw();
       return;
     }
-
     if (assignment.square) {
       const duplicate = next[side].some((item, idx) => idx !== index && item && item.square === assignment.square);
       if (duplicate) {
@@ -700,7 +659,6 @@ export function createGame() {
         return;
       }
     }
-
     next[side][index] = {
       pieceType: assignment.pieceType,
       specialization: assignment.specialization,
@@ -712,12 +670,9 @@ export function createGame() {
 
   async function handleDeleteSession(session) {
     const label = session.name || `Session ${String(session.id).slice(0, 8)}`;
-    const ok = window.confirm(`Delete session "${label}"? This cannot be undone.`);
-    if (!ok) return;
+    if (!window.confirm(`Delete session \"${label}\"? This cannot be undone.`)) return;
     await api.deleteSession(session.id);
-    if (state.sessionId === session.id) {
-      resetLocal();
-    }
+    if (state.sessionId === session.id) resetLocal();
     await refreshSessions();
   }
 
@@ -730,17 +685,8 @@ export function createGame() {
   }
 
   async function handleLogin() {
-    const { username, password } = getLoginFormValues();
-    document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
-      state.isSpecialized = event.target.checked;
-      redraw();
-    });
-    document.getElementById('newSessionSpecializedToggle').addEventListener('change', event => {
-      state.isSpecialized = event.target.checked;
-      redraw();
-    });
-
     try {
+      const { username, password } = getLoginFormValues();
       const data = await api.login(username, password);
       state.user = data.user;
       renderAuth(state.user);
@@ -767,7 +713,7 @@ export function createGame() {
     }
     const values = getNewSessionValues();
     const mode = values.mode === 'human-vs-ai' ? 'human-vs-ai' : 'human-vs-human';
-    const ruleset = values.specialized ? 'specialized' : 'normal';
+    const ruleset = state.isSandbox ? 'sandbox' : values.specialized ? 'specialized' : 'normal';
     const data = await api.createSession({ mode, side: values.side, name: values.name, ruleset, specializedAssignments: state.isSpecialized ? state.specializedAssignments : createEmptyAssignments() });
     await refreshSessions();
     await loadSession(data.session.id);
@@ -777,10 +723,7 @@ export function createGame() {
     bindControls({
       onReset: () => resetLocal(),
       onModeChange: mode => resetLocal(mode, state.playerColor),
-      onPlayerColorChange: color => {
-        state.playerColor = color;
-        redraw();
-      },
+      onPlayerColorChange: color => { state.playerColor = color; redraw(); },
       onStart: () => startGame(),
       onLogin: () => handleLogin(),
       onLogout: () => handleLogout(),
@@ -789,24 +732,17 @@ export function createGame() {
       onReplayPrev: () => { if (state.replayStates.length) { state.replayIndex = Math.max(0, state.replayIndex - 1); state.replayBoard = state.replayStates[state.replayIndex].board; redraw(); } },
       onReplayNext: () => { if (state.replayStates.length) { state.replayIndex = Math.min(state.replayStates.length - 1, state.replayIndex + 1); state.replayBoard = state.replayStates[state.replayIndex].board; redraw(); } },
       onReplayEnd: () => { if (state.replayStates.length) { state.replayIndex = state.replayStates.length - 1; state.replayBoard = null; redraw(); } },
-    });
-
-    document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
-      state.isSpecialized = event.target.checked;
-      redraw();
-    });
-    document.getElementById('newSessionSpecializedToggle').addEventListener('change', event => {
-      state.isSpecialized = event.target.checked;
-      redraw();
+      onRulesetChange: ruleset => {
+        updateRulesetState(ruleset);
+        redraw();
+      },
     });
 
     try {
       const me = await api.me();
       state.user = me.user;
       renderAuth(state.user);
-      if (state.user) {
-        await refreshSessions();
-      }
+      if (state.user) await refreshSessions();
     } catch {
       renderAuth(null);
     }
@@ -816,10 +752,3 @@ export function createGame() {
 
   return { init };
 }
-
-
-window.mycaturSandboxControls = {
-  undoSandboxAction: () => undoSandboxAction(),
-  sandboxDeletePiece: (row, col) => sandboxDeletePiece(row, col),
-  sandboxSummonPiece: (row, col, piece) => sandboxSummonPiece(row, col, piece),
-};
