@@ -515,9 +515,17 @@ export function createGame() {
     state.halfmoveClock = sessionRow.halfmove_clock;
     state.fullmoveNumber = sessionRow.fullmove_number;
     state.positionHistory = sessionRow.position_history_json || {};
-    state.specializedAssignments = sessionRow.specialized_assignments_json || { white: Array(6).fill(null), black: Array(6).fill(null) };
+    const loadedAssignments = sessionRow.specialized_assignments_json || createEmptyAssignments();
+    state.specializedAssignments = {
+      white: Array.from({ length: 6 }, (_, i) => loadedAssignments.white?.[i] || null),
+      black: Array.from({ length: 6 }, (_, i) => loadedAssignments.black?.[i] || null),
+    };
     state.moveHistory = moves.map(move => move.san);
     state.moveLog = state.moveHistory.map((san, index) => formatMoveEntry(index, san));
+    state.specializedAssignments = {
+      white: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.white?.[i] || null),
+      black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
+    };
     state.started = true;
     state.pendingPromotion = null;
     state.pendingPromotionMove = null;
@@ -568,6 +576,10 @@ export function createGame() {
   }
 
   async function startGame() {
+    state.specializedAssignments = {
+      white: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.white?.[i] || null),
+      black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
+    };
     state.started = true;
     clearSelection();
     if (Object.keys(state.positionHistory).length === 0) {
