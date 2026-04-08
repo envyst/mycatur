@@ -108,11 +108,11 @@ export function renderBoard(state, onSquareClick) {
           marker.style.position = 'absolute';
           marker.style.top = '4px';
           marker.style.right = '4px';
-          marker.style.fontSize = '10px';
+          marker.style.fontSize = '12px';
           marker.style.fontWeight = '800';
-          marker.style.padding = '1px 4px';
+          marker.style.padding = '2px 5px';
           marker.style.borderRadius = '999px';
-          marker.style.background = 'rgba(23, 27, 47, 0.92)';
+          marker.style.background = 'rgba(0, 0, 0, 0.92)';
           marker.style.color = '#fff';
           marker.style.zIndex = '2';
           marker.style.pointerEvents = 'none';
@@ -126,9 +126,10 @@ export function renderBoard(state, onSquareClick) {
         rank.style.position = 'absolute';
         rank.style.left = '4px';
         rank.style.top = '4px';
-        rank.style.fontSize = '11px';
+        rank.style.fontSize = '13px';
         rank.style.fontWeight = '700';
-        rank.style.opacity = '0.8';
+        rank.style.opacity = '1';
+        rank.style.color = ((rowIndex + colIndex) % 2 === 0) ? '#4a2f13' : '#fff6d8';
         rank.style.pointerEvents = 'none';
         square.appendChild(rank);
       }
@@ -139,9 +140,10 @@ export function renderBoard(state, onSquareClick) {
         file.style.position = 'absolute';
         file.style.right = '4px';
         file.style.bottom = '4px';
-        file.style.fontSize = '11px';
+        file.style.fontSize = '13px';
         file.style.fontWeight = '700';
-        file.style.opacity = '0.8';
+        file.style.opacity = '1';
+        file.style.color = ((rowIndex + colIndex) % 2 === 0) ? '#4a2f13' : '#fff6d8';
         file.style.pointerEvents = 'none';
         square.appendChild(file);
       }
