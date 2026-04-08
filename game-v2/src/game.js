@@ -12,12 +12,14 @@ import {
   renderPromotionControls,
   renderAuth,
   renderSessions,
+  renderSpecializedSetup,
   renderReplayControls,
   getLoginFormValues,
   getNewSessionValues,
 } from './ui.js';
 import { api } from './api.js';
 import { createEngine } from './engine.js';
+import { setAssignment } from './specialized.js';
 
 function sameSquare(a, b) {
   return a && b && a.row === b.row && a.col === b.col;
@@ -276,6 +278,7 @@ export function createGame() {
     renderPromotionControls(state, handlePromotion);
     renderAuth(state.user);
     renderSessions(state.sessions, loadSession, handleDeleteSession, handleRenameSession);
+    renderSpecializedSetup(state, handleSpecializedAssignment);
     renderReplayControls(state);
     syncControls(state);
     if (state.replayBoard) {
@@ -558,6 +561,12 @@ export function createGame() {
     maybeDoEngineMove();
   }
 
+
+
+  function handleSpecializedAssignment(side, square, pieceType, specialization) {
+    state.specializedAssignments = setAssignment(state.specializedAssignments, side, square, pieceType, specialization);
+    redraw();
+  }
 
   async function handleDeleteSession(session) {
     const label = session.name || `Session ${String(session.id).slice(0, 8)}`;

@@ -1,4 +1,5 @@
 import { getPieceLabel, getPieceSymbol, PIECE_TYPES } from './pieces.js';
+import { SPECIALIZED_CATALOG, SPECIALIZED_STARTING_SQUARES } from './specialized.js';
 
 function getDisplayRows(playerColor) {
   return playerColor === 'white'
@@ -105,13 +106,13 @@ export function renderStatus(state) {
     return;
   }
 
-  if (state.replayBoard) {
-    statusEl.textContent = `Replay mode | Step ${state.replayIndex}/${state.replayStates.length - 1}`;
+  if (state.aiThinking) {
+    statusEl.textContent = 'Human vs AI | AI is thinking...';
     return;
   }
 
-  if (state.aiThinking) {
-    statusEl.textContent = 'Human vs AI | AI is thinking...';
+  if (state.replayBoard) {
+    statusEl.textContent = `Replay mode | Step ${state.replayIndex}/${state.replayStates.length - 1}`;
     return;
   }
 
@@ -132,9 +133,65 @@ export function renderStatus(state) {
 
   const sessionBit = state.sessionId ? ` | Session: ${state.sessionId.slice(0, 8)}` : '';
   const readOnlyBit = state.readOnly ? ' | Read-only history view' : '';
-  const modeLabel = state.mode === 'human-vs-ai' ? 'Human vs AI' : 'Human vs Human';
+  const modeLabel = state.mode === 'human-vs-ai' ? 'Human vs AI' : state.mode === 'specialized' ? 'Specialized Mode' : 'Human vs Human';
   const extra = state.statusMessage ? ` | ${state.statusMessage}` : '';
   statusEl.textContent = `Mode: ${modeLabel} | Current turn: ${state.currentTurn}${extra}${sessionBit}${readOnlyBit}`;
+}
+
+export function renderSpecializedSetup(state, onAssign) {
+  const wrap = document.getElementById('specializedSetup');
+  wrap.innerHTML = '';
+
+  if (state.mode !== 'specialized' || state.started) {
+    wrap.innerHTML = '<div class="item-meta">Specialized assignment appears only before starting a specialized game.</div>';
+    return;
+  }
+
+  ['white', 'black'].forEach(side => {
+    const section = document.createElement('div');
+    section.className = 'item';
+    const title = document.createElement('div');
+    title.className = 'item-title';
+    title.textContent = `${side.toUpperCase()} assignments (${state.specializedAssignments[side].length}/6)`;
+    section.appendChild(title);
+
+    Object.entries(SPECIALIZED_STARTING_SQUARES[side]).forEach(([pieceType, squares]) => {
+      const label = document.createElement('div');
+      label.className = 'item-meta';
+      label.style.marginTop = '8px';
+      label.textContent = pieceType;
+      section.appendChild(label);
+
+      squares.forEach(square => {
+        const row = document.createElement('div');
+        row.className = 'inline-controls';
+        row.style.marginTop = '6px';
+        const squareLabel = document.createElement('div');
+        squareLabel.className = 'item-meta';
+        squareLabel.style.minWidth = '52px';
+        squareLabel.textContent = square;
+        const select = document.createElement('select');
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = 'Normal';
+        select.appendChild(empty);
+        (SPECIALIZED_CATALOG[pieceType] || []).forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          select.appendChild(opt);
+        });
+        const current = (state.specializedAssignments[side] || []).find(item => item.square === square);
+        select.value = current?.specialization || '';
+        select.addEventListener('change', event => onAssign(side, square, pieceType, event.target.value));
+        row.appendChild(squareLabel);
+        row.appendChild(select);
+        section.appendChild(row);
+      });
+    });
+
+    wrap.appendChild(section);
+  });
 }
 
 export function renderMoveLog(state, onJumpToMove) {
