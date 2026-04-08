@@ -318,6 +318,7 @@ export function createGame() {
       state.checkColor = null;
       state.winner = null;
       state.isDraw = false;
+      state.pendingPromotion = null;
       if (!state.statusMessage) state.statusMessage = 'Sandbox mode active.';
       return;
     }
@@ -474,8 +475,11 @@ export function createGame() {
       }
       pushSandboxHistorySnapshot();
       const piece = getPiece(state.board, best.from.row, best.from.col);
-      state.board[best.to.row][best.to.col] = piece;
-      state.board[best.from.row][best.from.col] = null;
+      const applied = applyMove(state.board, best.from.row, best.from.col, best.to.row, best.to.col, state);
+      state.board = applied.board;
+      state.castlingRights = applied.castlingRights;
+      state.enPassantTarget = applied.enPassantTarget;
+      state.pendingPromotion = null;
       state.lastMove = { from: best.from, to: best.to };
       state.currentTurn = getOpponentColor(requestedSide);
       state.statusMessage = `Sandbox AI (${requestedSide}) moved ${piece?.type || 'piece'} to ${toChessCoord(best.to.row, best.to.col)}.`;

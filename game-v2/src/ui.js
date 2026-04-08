@@ -308,7 +308,7 @@ export function renderSandboxControls(state, handlers) {
   const aiWhiteButton = document.getElementById('sandboxAskAiWhiteButton');
   const aiBlackButton = document.getElementById('sandboxAskAiBlackButton');
 
-  if (!section) return;
+  if (!section || !status || !summonColor || !summonType || !summonButton || !deleteButton || !undoButton || !markerInput || !applyMarkerButton || !clearMarkerButton || !aiWhiteButton || !aiBlackButton) return;
 
   section.style.display = state.isSandbox ? 'block' : 'none';
   if (!state.isSandbox) return;
