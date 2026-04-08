@@ -1,5 +1,5 @@
 import { getPieceLabel, getPieceSymbol, PIECE_TYPES } from './pieces.js';
-import { SPECIALIZED_CATALOG, SPECIALIZED_STARTING_SQUARES } from './specialized.js';
+import { SPECIALIZED_CATALOG, SPECIALIZED_STARTING_SQUARES, specializationMarkerLabel, friendlySquareLabel } from './specialized.js';
 
 function getDisplayRows(playerColor) {
   return playerColor === 'white'
@@ -13,8 +13,14 @@ function getDisplayCols(playerColor) {
     : [7, 6, 5, 4, 3, 2, 1, 0];
 }
 
-function pieceLabelForSquare(square, pieceType) {
-  return `${square} — ${pieceType}`;
+function coordLabel(row, col) {
+  return `${'abcdefgh'[col]}${8 - row}`;
+}
+
+function getAssignedSpecialization(state, row, col) {
+  const all = [...(state.specializedAssignments?.white || []), ...(state.specializedAssignments?.black || [])].filter(Boolean);
+  const hit = all.find(item => item.square.toLowerCase() === coordLabel(row, col));
+  return hit || null;
 }
 
 export function renderBoardBanner(state) {
@@ -63,8 +69,8 @@ export function renderBoard(state, onSquareClick) {
   const lastMoveFrom = state.lastMove?.from ? `${state.lastMove.from.row}:${state.lastMove.from.col}` : null;
   const lastMoveTo = state.lastMove?.to ? `${state.lastMove.to.row}:${state.lastMove.to.col}` : null;
 
-  displayRows.forEach(rowIndex => {
-    displayCols.forEach(colIndex => {
+  displayRows.forEach((rowIndex, visualRowIndex) => {
+    displayCols.forEach((colIndex, visualColIndex) => {
       const piece = boardToRender[rowIndex][colIndex];
       const square = document.createElement('button');
       square.className = `square ${(rowIndex + colIndex) % 2 === 0 ? 'light' : 'dark'}`;
@@ -89,11 +95,55 @@ export function renderBoard(state, onSquareClick) {
       }
 
       if (piece) {
+        const assigned = getAssignedSpecialization(state, rowIndex, colIndex);
         const span = document.createElement('span');
         span.className = `piece ${piece.color === 'white' ? 'white-piece' : 'black-piece'}`;
         span.textContent = getPieceSymbol(piece);
-        span.title = getPieceLabel(piece);
+        span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}` : getPieceLabel(piece);
         square.appendChild(span);
+
+        if (assigned) {
+          const marker = document.createElement('span');
+          marker.textContent = specializationMarkerLabel(assigned.specialization);
+          marker.style.position = 'absolute';
+          marker.style.top = '4px';
+          marker.style.right = '4px';
+          marker.style.fontSize = '10px';
+          marker.style.fontWeight = '800';
+          marker.style.padding = '1px 4px';
+          marker.style.borderRadius = '999px';
+          marker.style.background = 'rgba(23, 27, 47, 0.92)';
+          marker.style.color = '#fff';
+          marker.style.zIndex = '2';
+          marker.style.pointerEvents = 'none';
+          square.appendChild(marker);
+        }
+      }
+
+      if (visualColIndex === 0) {
+        const rank = document.createElement('span');
+        rank.textContent = String(8 - rowIndex);
+        rank.style.position = 'absolute';
+        rank.style.left = '4px';
+        rank.style.top = '4px';
+        rank.style.fontSize = '11px';
+        rank.style.fontWeight = '700';
+        rank.style.opacity = '0.8';
+        rank.style.pointerEvents = 'none';
+        square.appendChild(rank);
+      }
+
+      if (visualRowIndex === displayRows.length - 1) {
+        const file = document.createElement('span');
+        file.textContent = 'abcdefgh'[colIndex];
+        file.style.position = 'absolute';
+        file.style.right = '4px';
+        file.style.bottom = '4px';
+        file.style.fontSize = '11px';
+        file.style.fontWeight = '700';
+        file.style.opacity = '0.8';
+        file.style.pointerEvents = 'none';
+        square.appendChild(file);
       }
 
       square.addEventListener('click', () => onSquareClick(rowIndex, colIndex));
@@ -204,7 +254,7 @@ export function renderSpecializedSetup(state, onAssign) {
         (SPECIALIZED_STARTING_SQUARES[side][selectedType] || []).forEach(square => {
           const opt = document.createElement('option');
           opt.value = square;
-          opt.textContent = pieceLabelForSquare(square, selectedType);
+          opt.textContent = friendlySquareLabel(side, selectedType, square);
           if (current?.square === square) {
             opt.selected = true;
           }

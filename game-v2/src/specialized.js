@@ -131,3 +131,29 @@ export function isIronPawnAt(assignments, row, col) {
   const item = getSpecializedPieceAt(assignments, row, col);
   return item?.specialization === 'Iron Pawn';
 }
+
+
+export function friendlySquareLabel(side, pieceType, square) {
+  const sideMap = SPECIALIZED_STARTING_SQUARES[side]?.[pieceType] || [];
+  if (sideMap.length === 2) {
+    if (pieceType === 'knight') {
+      return square === sideMap[0] ? `${square} - left knight` : `${square} - right knight`;
+    }
+    if (pieceType === 'bishop') {
+      return square === sideMap[0] ? `${square} - left bishop` : `${square} - right bishop`;
+    }
+    if (pieceType === 'rook') {
+      return square === sideMap[0] ? `${square} - left rook` : `${square} - right rook`;
+    }
+  }
+  return `${square} - ${pieceType}`;
+}
+
+export function specializationMarkerLabel(name) {
+  return name
+    .split(/\s+/)
+    .map(part => part[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase();
+}
