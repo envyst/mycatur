@@ -27,4 +27,5 @@ export const api = {
   createSession: (payload) => request('/api/sessions', { method: 'POST', body: JSON.stringify(payload) }),
   getSession: (id) => request(`/api/sessions/${id}`),
   updateSession: (id, payload) => request(`/api/sessions/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteSession: (id) => request(`/api/sessions/${id}`, { method: 'DELETE' }),
 };

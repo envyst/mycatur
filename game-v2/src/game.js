@@ -17,6 +17,7 @@ import {
   getNewSessionValues,
 } from './ui.js';
 import { api } from './api.js';
+import { createEngine } from './engine.js';
 
 function sameSquare(a, b) {
   return a && b && a.row === b.row && a.col === b.col;
@@ -209,9 +210,11 @@ export function createGame() {
     readOnly: false,
     moveHistory: [],
     pendingPromotionMove: null,
+    lastMove: null,
     replayStates: [],
     replayIndex: 0,
     replayBoard: null,
+    engine: createEngine(),
   };
 
   function updateGameStatus() {
@@ -271,7 +274,7 @@ export function createGame() {
     renderMoveLog(state, jumpToReplayIndex);
     renderPromotionControls(state, handlePromotion);
     renderAuth(state.user);
-    renderSessions(state.sessions, loadSession);
+    renderSessions(state.sessions, loadSession, handleDeleteSession, handleRenameSession);
     renderReplayControls(state);
     syncControls(state);
     if (state.replayBoard) {
@@ -390,6 +393,7 @@ export function createGame() {
 
     const nextTurn = getOpponentColor(piece.color);
     const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, gameStateBefore, state.board, nextTurn);
+    state.lastMove = { from, to };
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
 
@@ -415,36 +419,28 @@ export function createGame() {
     await finalizeTurn(movePayload);
   }
 
-  function maybeDoEngineMove() {
+  async function maybeDoEngineMove() {
     if (!state.started || state.winner || state.pendingPromotion || state.isDraw || state.readOnly) return;
     if (state.mode !== 'human-vs-ai') return;
     if (state.currentTurn === state.playerColor) return;
 
-    const legalMoves = [];
-    state.board.forEach((row, rowIndex) => {
-      row.forEach((piece, colIndex) => {
-        if (piece && piece.color === state.currentTurn) {
-          const moves = getLegalMoves(state.board, rowIndex, colIndex, state);
-          moves.forEach(move => legalMoves.push({ from: { row: rowIndex, col: colIndex }, to: move }));
-        }
-      });
-    });
-
-    if (legalMoves.length === 0) {
-      updateGameStatus();
-      redraw();
-      return;
-    }
-
-    const chosen = legalMoves[Math.floor(Math.random() * legalMoves.length)];
-    setTimeout(async () => {
-      await makeMove(chosen.from, chosen.to);
+    try {
+      const best = await state.engine.getBestMove(state, { depth: 10 });
+      if (!best) {
+        updateGameStatus();
+        redraw();
+        return;
+      }
+      await makeMove(best.from, best.to);
       if (state.pendingPromotion) {
-        await handlePromotion(PIECE_TYPES.QUEEN);
+        const promoMap = { q: PIECE_TYPES.QUEEN, r: PIECE_TYPES.ROOK, b: PIECE_TYPES.BISHOP, n: PIECE_TYPES.KNIGHT };
+        await handlePromotion(promoMap[best.promotion] || PIECE_TYPES.QUEEN);
         return;
       }
       redraw();
-    }, 350);
+    } catch (error) {
+      console.error('Engine move failed', error);
+    }
   }
 
   async function handleSquareClick(row, col) {
@@ -480,6 +476,10 @@ export function createGame() {
   function applySessionRow(sessionRow, moves = []) {
     state.sessionId = sessionRow.id;
     state.mode = sessionRow.mode === 'human-vs-ai' ? 'human-vs-ai' : GAME_MODES.HUMAN_VS_HUMAN;
+    if (state.user) {
+      if (sessionRow.white_user_id === state.user.id) state.playerColor = 'white';
+      else if (sessionRow.black_user_id === state.user.id) state.playerColor = 'black';
+    }
     state.currentTurn = sessionRow.current_turn;
     state.board = sessionRow.board_state_json;
     state.castlingRights = sessionRow.castling_rights_json;
@@ -492,6 +492,7 @@ export function createGame() {
     state.started = true;
     state.pendingPromotion = null;
     state.pendingPromotionMove = null;
+    state.lastMove = moves.length ? { from: null, to: null } : null;
     state.readOnly = sessionRow.status === 'finished';
     state.winner = null;
     state.isDraw = false;
@@ -507,6 +508,7 @@ export function createGame() {
     const data = await api.getSession(sessionId);
     applySessionRow(data.session, data.moves || []);
     redraw();
+    maybeDoEngineMove();
   }
 
   function resetLocal(mode = state.mode, playerColor = state.playerColor) {
@@ -542,6 +544,26 @@ export function createGame() {
     maybeDoEngineMove();
   }
 
+
+  async function handleDeleteSession(session) {
+    const label = session.name || `Session ${String(session.id).slice(0, 8)}`;
+    const ok = window.confirm(`Delete session "${label}"? This cannot be undone.`);
+    if (!ok) return;
+    await api.deleteSession(session.id);
+    if (state.sessionId === session.id) {
+      resetLocal();
+    }
+    await refreshSessions();
+  }
+
+  async function handleRenameSession(session) {
+    const current = session.name || `Session ${String(session.id).slice(0, 8)}`;
+    const next = window.prompt('Rename session', current);
+    if (!next) return;
+    await api.updateSession(session.id, { name: next.trim() });
+    await refreshSessions();
+  }
+
   async function handleLogin() {
     const { username, password } = getLoginFormValues();
     try {
@@ -571,7 +593,7 @@ export function createGame() {
     }
     const values = getNewSessionValues();
     const mode = values.mode === 'human-vs-ai' ? 'human-vs-ai' : 'human-vs-human';
-    const data = await api.createSession({ mode, side: values.side });
+    const data = await api.createSession({ mode, side: values.side, name: values.name });
     await refreshSessions();
     await loadSession(data.session.id);
   }

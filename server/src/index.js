@@ -85,7 +85,7 @@ app.get('/api/me', (req, res) => {
 app.get('/api/sessions', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const result = await pool.query(
-    `SELECT id, mode, status, result, current_turn, pgn_text, updated_at, created_at,
+    `SELECT id, name, mode, status, result, current_turn, pgn_text, updated_at, created_at,
             white_user_id, black_user_id
      FROM game_sessions
      WHERE white_user_id = $1 OR black_user_id = $1
@@ -96,21 +96,23 @@ app.get('/api/sessions', requireAuth, async (req, res) => {
 });
 
 app.post('/api/sessions', requireAuth, async (req, res) => {
-  const { mode = 'human-vs-human', side = 'white' } = req.body || {};
+  const { mode = 'human-vs-human', side = 'white', name = '' } = req.body || {};
   const userId = req.session.user.id;
   const initial = createInitialGameState(mode);
 
+  const aiMode = mode === 'human-vs-ai';
   const whiteUserId = side === 'white' ? userId : null;
   const blackUserId = side === 'black' ? userId : null;
 
   const result = await pool.query(
     `INSERT INTO game_sessions (
-      white_user_id, black_user_id, mode, status, result, current_turn,
+      name, white_user_id, black_user_id, mode, status, result, current_turn,
       board_state_json, castling_rights_json, en_passant_target_json,
       halfmove_clock, fullmove_number, position_history_json, pgn_text
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
     RETURNING *`,
     [
+      name || null,
       whiteUserId,
       blackUserId,
       initial.mode,
@@ -154,6 +156,7 @@ app.get('/api/sessions/:id', requireAuth, async (req, res) => {
 app.put('/api/sessions/:id', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const {
+    name,
     status,
     result,
     currentTurn,
@@ -181,22 +184,24 @@ app.put('/api/sessions/:id', requireAuth, async (req, res) => {
 
   const updated = await pool.query(
     `UPDATE game_sessions SET
-      status = $2,
-      result = $3,
-      current_turn = $4,
-      board_state_json = $5,
-      castling_rights_json = $6,
-      en_passant_target_json = $7,
-      halfmove_clock = $8,
-      fullmove_number = $9,
-      position_history_json = $10,
-      pgn_text = $11,
+      name = COALESCE($2, name),
+      status = $3,
+      result = $4,
+      current_turn = $5,
+      board_state_json = $6,
+      castling_rights_json = $7,
+      en_passant_target_json = $8,
+      halfmove_clock = $9,
+      fullmove_number = $10,
+      position_history_json = $11,
+      pgn_text = $12,
       updated_at = NOW(),
-      finished_at = CASE WHEN $2 = 'finished' THEN NOW() ELSE NULL END
+      finished_at = CASE WHEN $3 = 'finished' THEN NOW() ELSE NULL END
      WHERE id = $1
      RETURNING *`,
     [
       req.params.id,
+      name || null,
       status,
       result,
       currentTurn,
@@ -232,13 +237,29 @@ app.put('/api/sessions/:id', requireAuth, async (req, res) => {
   res.json({ session: updated.rows[0] });
 });
 
+
+app.delete('/api/sessions/:id', requireAuth, async (req, res) => {
+  const userId = req.session.user.id;
+  await pool.query(
+    `DELETE FROM game_sessions WHERE id = $1 AND (white_user_id = $2 OR black_user_id = $2)`,
+    [req.params.id, userId],
+  );
+  res.json({ ok: true });
+});
+
 app.use(express.static('game-v2'));
 app.get('*', (_req, res) => {
   res.sendFile(new URL('../../game-v2/index.html', import.meta.url).pathname);
 });
 
+
+async function runMigrations() {
+  await pool.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS name TEXT`);
+}
+
 async function start() {
   await pool.query('SELECT 1');
+  await runMigrations();
   await seedDefaultUsers();
   app.listen(PORT, () => {
     console.log(`mycatur app listening on :${PORT}`);

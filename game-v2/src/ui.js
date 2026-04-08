@@ -12,7 +12,6 @@ function getDisplayCols(playerColor) {
     : [7, 6, 5, 4, 3, 2, 1, 0];
 }
 
-
 export function renderBoardBanner(state) {
   const banner = document.getElementById('boardBanner');
   const title = document.getElementById('boardBannerTitle');
@@ -56,6 +55,8 @@ export function renderBoard(state, onSquareClick) {
   const displayRows = getDisplayRows(state.playerColor);
   const displayCols = getDisplayCols(state.playerColor);
   const boardToRender = state.replayBoard || state.board;
+  const lastMoveFrom = state.lastMove?.from ? `${state.lastMove.from.row}:${state.lastMove.from.col}` : null;
+  const lastMoveTo = state.lastMove?.to ? `${state.lastMove.to.row}:${state.lastMove.to.col}` : null;
 
   displayRows.forEach(rowIndex => {
     displayCols.forEach(colIndex => {
@@ -72,6 +73,14 @@ export function renderBoard(state, onSquareClick) {
 
       if (!state.replayBoard && validTargets.includes(`${rowIndex}:${colIndex}`)) {
         square.classList.add('target');
+      }
+
+      const key = `${rowIndex}:${colIndex}`;
+      if (lastMoveFrom && key === lastMoveFrom) {
+        square.style.boxShadow = 'inset 0 0 0 9999px rgba(255, 196, 0, 0.42), inset 0 0 0 3px rgba(255, 230, 120, 0.95)';
+      }
+      if (lastMoveTo && key === lastMoveTo) {
+        square.style.boxShadow = 'inset 0 0 0 9999px rgba(0, 255, 170, 0.42), inset 0 0 0 3px rgba(180, 255, 230, 0.98)';
       }
 
       if (piece) {
@@ -244,7 +253,7 @@ function sessionResultLabel(session) {
   return 'In progress';
 }
 
-export function renderSessions(sessions, onOpenSession) {
+export function renderSessions(sessions, onOpenSession, onDeleteSession, onRenameSession) {
   const listEl = document.getElementById('sessionList');
   listEl.innerHTML = '';
 
@@ -274,25 +283,36 @@ export function renderSessions(sessions, onOpenSession) {
     listEl.appendChild(heading);
 
     group.items.forEach(session => {
-    const item = document.createElement('div');
-    item.className = 'item';
-    const title = document.createElement('div');
-    title.className = 'item-title';
-    title.textContent = `${session.mode} • ${session.status}`;
-    const meta = document.createElement('div');
-    meta.className = 'item-meta';
-    meta.textContent = `Result: ${sessionResultLabel(session)} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
-    const actions = document.createElement('div');
-    actions.className = 'inline-actions';
-    const button = document.createElement('button');
-    button.className = 'secondary';
-    button.textContent = session.status === 'finished' ? 'View / Replay' : 'Open';
-    button.addEventListener('click', () => onOpenSession(session.id));
-    actions.appendChild(button);
-    item.appendChild(title);
-    item.appendChild(meta);
-    item.appendChild(actions);
-    listEl.appendChild(item);
+      const item = document.createElement('div');
+      item.className = 'item';
+      const title = document.createElement('div');
+      title.className = 'item-title';
+      title.textContent = session.name || `Session ${String(session.id).slice(0, 8)}`;
+      const meta = document.createElement('div');
+      meta.className = 'item-meta';
+      const userSide = session.white_user_id ? 'White' : session.black_user_id ? 'Black' : '-';
+      meta.textContent = `You play: ${userSide} | Result: ${sessionResultLabel(session)} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
+      const actions = document.createElement('div');
+      actions.className = 'inline-actions';
+      const openButton = document.createElement('button');
+      openButton.className = 'secondary';
+      openButton.textContent = session.status === 'finished' ? 'View / Replay' : 'Open';
+      openButton.addEventListener('click', () => onOpenSession(session.id));
+      const renameButton = document.createElement('button');
+      renameButton.className = 'secondary';
+      renameButton.textContent = 'Rename';
+      renameButton.addEventListener('click', () => onRenameSession(session));
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'danger';
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', () => onDeleteSession(session));
+      actions.appendChild(openButton);
+      actions.appendChild(renameButton);
+      actions.appendChild(deleteButton);
+      item.appendChild(title);
+      item.appendChild(meta);
+      item.appendChild(actions);
+      listEl.appendChild(item);
     });
   });
 }
@@ -313,5 +333,6 @@ export function getNewSessionValues() {
   return {
     mode: document.getElementById('newSessionModeSelect').value,
     side: document.getElementById('newSessionSideSelect').value,
+    name: document.getElementById('newSessionNameInput').value.trim(),
   };
 }
