@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bishop icon">
+  <rect width="64" height="64" rx="12" fill="#171b2f"/>
+  <path d="M32 10c4 0 7 3 7 7 0 2-1 4-2 5l-2 2 7 9c4 5 6 11 6 18v3H16v-3c0-7 2-13 6-18l7-9-2-2c-1-1-2-3-2-5 0-4 3-7 7-7zm0 6a1 1 0 100 2 1 1 0 000-2zm0 12l-8 10c-3 4-4 8-4 13h24c0-5-1-9-4-13L32 28z" fill="#ffffff"/>
+  <path d="M27 24l10-10" stroke="#6ea8fe" stroke-width="3" stroke-linecap="round"/>
+</svg>

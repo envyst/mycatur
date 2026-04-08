@@ -4,6 +4,7 @@ import { createInitialState } from './state.js';
 import { getPiece, getLegalMoves, applyMove, isKingInCheck, hasAnyLegalMove, createPositionKey } from './board.js';
 import {
   renderBoard,
+  renderBoardBanner,
   renderMoveLog,
   renderStatus,
   bindControls,
@@ -255,8 +256,17 @@ export function createGame() {
     }
   }
 
+
+  function scrollActiveReplayMoveIntoView() {
+    const active = document.querySelector('[data-active-replay-move="true"]');
+    if (active) {
+      active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
   function redraw() {
     renderBoard(state, handleSquareClick);
+    renderBoardBanner(state);
     renderStatus(state);
     renderMoveLog(state, jumpToReplayIndex);
     renderPromotionControls(state, handlePromotion);
@@ -264,6 +274,9 @@ export function createGame() {
     renderSessions(state.sessions, loadSession);
     renderReplayControls(state);
     syncControls(state);
+    if (state.replayBoard) {
+      setTimeout(scrollActiveReplayMoveIntoView, 0);
+    }
   }
 
 

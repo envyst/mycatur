@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mycatur Game V2</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/icons/bishop.svg" />
   <style>
     :root {
       --bg: #0f1220;
@@ -60,8 +61,56 @@
       justify-content: center;
     }
 
-    .board {
+    .board-stage {
       width: min(80vw, 760px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .board-banner {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: none;
+    }
+
+    .board-banner.show {
+      display: block;
+    }
+
+    .board-banner.checkmate {
+      background: rgba(255, 123, 123, 0.16);
+      border-color: rgba(255, 123, 123, 0.35);
+    }
+
+    .board-banner.draw {
+      background: rgba(251, 191, 36, 0.16);
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+
+    .board-banner.replay {
+      background: rgba(110, 168, 254, 0.16);
+      border-color: rgba(110, 168, 254, 0.35);
+    }
+
+    .board-banner-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .board-banner-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .board {
+      width: 100%;
       aspect-ratio: 1 / 1;
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -248,8 +297,13 @@
         padding: 12px;
       }
 
-      .board {
+      .board-stage {
         width: min(100%, calc(100vw - 24px));
+      }
+
+      .board,
+      .board-banner {
+        width: 100%;
         border-radius: 12px;
       }
 
@@ -310,7 +364,13 @@
     </div>
 
     <div class="panel board-wrap">
-      <div id="board" class="board"></div>
+      <div class="board-stage">
+        <div id="boardBanner" class="board-banner">
+          <div id="boardBannerTitle" class="board-banner-title"></div>
+          <div id="boardBannerSubtitle" class="board-banner-subtitle"></div>
+        </div>
+        <div id="board" class="board"></div>
+      </div>
     </div>
 
     <div class="panel sidebar">
@@ -350,7 +410,7 @@
           <button id="replayStartButton" class="secondary">|&lt;</button>
           <button id="replayPrevButton" class="secondary">&lt;</button>
           <button id="replayNextButton" class="secondary">&gt;</button>
-          <button id="replayEndButton" class="secondary">&gt;|</button>
+          <button id="replayEndButton" class="secondary">Back to Live</button>
         </div>
         <div id="replayStatus" class="status-line" style="margin-top:10px;"></div>
       </div>

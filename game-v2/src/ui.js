@@ -12,6 +12,38 @@ function getDisplayCols(playerColor) {
     : [7, 6, 5, 4, 3, 2, 1, 0];
 }
 
+
+export function renderBoardBanner(state) {
+  const banner = document.getElementById('boardBanner');
+  const title = document.getElementById('boardBannerTitle');
+  const subtitle = document.getElementById('boardBannerSubtitle');
+
+  banner.className = 'board-banner';
+  title.textContent = '';
+  subtitle.textContent = '';
+
+  if (state.replayBoard) {
+    banner.classList.add('show', 'replay');
+    title.textContent = 'REPLAY MODE';
+    subtitle.textContent = `Viewing move ${state.replayIndex} of ${Math.max(0, state.replayStates.length - 1)}. Use replay controls or click a move in the log.`;
+    return;
+  }
+
+  if (state.winner) {
+    banner.classList.add('show', 'checkmate');
+    title.textContent = 'CHECKMATE';
+    subtitle.textContent = `${state.winner.toUpperCase()} wins. ${state.statusMessage || ''}`.trim();
+    return;
+  }
+
+  if (state.isDraw) {
+    banner.classList.add('show', 'draw');
+    title.textContent = 'DRAW';
+    subtitle.textContent = state.statusMessage || 'Game ended in a draw.';
+    return;
+  }
+}
+
 export function renderBoard(state, onSquareClick) {
   const boardEl = document.getElementById('board');
   boardEl.innerHTML = '';
@@ -112,6 +144,7 @@ export function renderMoveLog(state, onJumpToMove) {
     item.style.width = '100%';
     if (state.replayBoard && state.replayIndex === index + 1) {
       item.style.outline = '2px solid rgba(110, 168, 254, 0.55)';
+      item.dataset.activeReplayMove = 'true';
     }
     item.textContent = entry;
     item.addEventListener('click', () => onJumpToMove(index + 1));
@@ -163,7 +196,9 @@ export function renderReplayControls(state) {
   document.getElementById('replayEndButton').disabled = disabled;
   replayStatus.textContent = disabled
     ? 'Load a saved session to replay moves.'
-    : `Replay step ${state.replayIndex}/${state.replayStates.length - 1}`;
+    : state.replayBoard
+      ? `Replay step ${state.replayIndex}/${state.replayStates.length - 1}`
+      : 'Live board view';
 }
 
 export function bindControls({ onReset, onModeChange, onPlayerColorChange, onStart, onLogin, onLogout, onCreateSession, onReplayStart, onReplayPrev, onReplayNext, onReplayEnd }) {
@@ -202,6 +237,13 @@ export function renderAuth(user, error = '') {
   }
 }
 
+function sessionResultLabel(session) {
+  if (session.result === 'white-win') return 'White won';
+  if (session.result === 'black-win') return 'Black won';
+  if (session.result === 'draw') return 'Draw';
+  return 'In progress';
+}
+
 export function renderSessions(sessions, onOpenSession) {
   const listEl = document.getElementById('sessionList');
   listEl.innerHTML = '';
@@ -214,7 +256,24 @@ export function renderSessions(sessions, onOpenSession) {
     return;
   }
 
-  sessions.forEach(session => {
+  const active = sessions.filter(session => session.status !== 'finished');
+  const finished = sessions.filter(session => session.status === 'finished');
+
+  const groups = [
+    { title: 'Active Sessions', items: active },
+    { title: 'Finished Sessions', items: finished },
+  ];
+
+  groups.forEach(group => {
+    if (!group.items.length) return;
+    const heading = document.createElement('div');
+    heading.className = 'item-meta';
+    heading.style.marginTop = '6px';
+    heading.style.fontWeight = '700';
+    heading.textContent = group.title;
+    listEl.appendChild(heading);
+
+    group.items.forEach(session => {
     const item = document.createElement('div');
     item.className = 'item';
     const title = document.createElement('div');
@@ -222,7 +281,7 @@ export function renderSessions(sessions, onOpenSession) {
     title.textContent = `${session.mode} • ${session.status}`;
     const meta = document.createElement('div');
     meta.className = 'item-meta';
-    meta.textContent = `Result: ${session.result || '-'} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
+    meta.textContent = `Result: ${sessionResultLabel(session)} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
     const actions = document.createElement('div');
     actions.className = 'inline-actions';
     const button = document.createElement('button');
@@ -234,6 +293,7 @@ export function renderSessions(sessions, onOpenSession) {
     item.appendChild(meta);
     item.appendChild(actions);
     listEl.appendChild(item);
+    });
   });
 }
 
