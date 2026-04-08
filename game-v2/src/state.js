@@ -52,5 +52,6 @@ export function createInitialState(options = {}) {
     halfmoveClock: 0,
     positionHistory: {},
     specializedAssignments: createEmptyAssignments(),
+    isSpecialized: false,
   };
 }

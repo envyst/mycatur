@@ -85,7 +85,7 @@ app.get('/api/me', (req, res) => {
 app.get('/api/sessions', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const result = await pool.query(
-    `SELECT id, name, mode, status, result, current_turn, pgn_text, updated_at, created_at,
+    `SELECT id, name, mode, ruleset, status, result, current_turn, pgn_text, updated_at, created_at,
             white_user_id, black_user_id
      FROM game_sessions
      WHERE white_user_id = $1 OR black_user_id = $1
@@ -96,7 +96,7 @@ app.get('/api/sessions', requireAuth, async (req, res) => {
 });
 
 app.post('/api/sessions', requireAuth, async (req, res) => {
-  const { mode = 'human-vs-human', side = 'white', name = '' } = req.body || {};
+  const { mode = 'human-vs-human', side = 'white', name = '', ruleset = 'normal' } = req.body || {};
   const userId = req.session.user.id;
   const initial = createInitialGameState(mode);
 
@@ -106,16 +106,17 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
 
   const result = await pool.query(
     `INSERT INTO game_sessions (
-      name, white_user_id, black_user_id, mode, status, result, current_turn,
+      name, white_user_id, black_user_id, mode, ruleset, status, result, current_turn,
       board_state_json, castling_rights_json, en_passant_target_json,
       halfmove_clock, fullmove_number, position_history_json, pgn_text
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
     RETURNING *`,
     [
       name || null,
       whiteUserId,
       blackUserId,
       initial.mode,
+      ruleset,
       initial.status,
       initial.result,
       initial.currentTurn,
@@ -157,6 +158,7 @@ app.put('/api/sessions/:id', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const {
     name,
+    ruleset,
     status,
     result,
     currentTurn,
@@ -185,23 +187,25 @@ app.put('/api/sessions/:id', requireAuth, async (req, res) => {
   const updated = await pool.query(
     `UPDATE game_sessions SET
       name = COALESCE($2, name),
-      status = $3,
-      result = $4,
-      current_turn = $5,
-      board_state_json = $6,
-      castling_rights_json = $7,
-      en_passant_target_json = $8,
-      halfmove_clock = $9,
-      fullmove_number = $10,
-      position_history_json = $11,
-      pgn_text = $12,
+      ruleset = COALESCE($3, ruleset),
+      status = $4,
+      result = $5,
+      current_turn = $6,
+      board_state_json = $7,
+      castling_rights_json = $8,
+      en_passant_target_json = $9,
+      halfmove_clock = $10,
+      fullmove_number = $11,
+      position_history_json = $12,
+      pgn_text = $13,
       updated_at = NOW(),
-      finished_at = CASE WHEN $3 = 'finished' THEN NOW() ELSE NULL END
+      finished_at = CASE WHEN $4 = 'finished' THEN NOW() ELSE NULL END
      WHERE id = $1
      RETURNING *`,
     [
       req.params.id,
       name || null,
+      ruleset || null,
       status,
       result,
       currentTurn,
@@ -253,8 +257,10 @@ app.get('*', (_req, res) => {
 });
 
 
+
 async function runMigrations() {
   await pool.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS name TEXT`);
+  await pool.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS ruleset TEXT NOT NULL DEFAULT 'normal'`);
 }
 
 async function start() {

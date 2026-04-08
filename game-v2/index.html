@@ -352,14 +352,13 @@
           <select id="newSessionModeSelect">
             <option value="human-vs-human">Human vs Human</option>
             <option value="human-vs-ai">Human vs AI</option>
-            <option value="specialized">Specialized Mode</option>
-            <option value="specialized">Specialized Mode</option>
           </select>
           <select id="newSessionSideSelect">
             <option value="white">Play as White</option>
             <option value="black">Play as Black</option>
           </select>
           <input id="newSessionNameInput" type="text" placeholder="Optional session name" />
+          <label class="item-meta"><input id="newSessionSpecializedToggle" type="checkbox" style="width:auto; margin-right:8px;" /> Specialized ruleset</label>
           <button id="newSessionButton">Create New Session</button>
         </div>
         <div id="sessionList" class="list" style="margin-top:12px;"></div>
@@ -383,8 +382,8 @@
           <select id="modeSelect">
             <option value="human-vs-human">Human vs Human</option>
             <option value="human-vs-ai">Human vs AI</option>
-            <option value="specialized">Specialized Mode</option>
           </select>
+          <label class="item-meta"><input id="rulesetSpecializedToggle" type="checkbox" style="width:auto; margin-right:8px;" /> Specialized ruleset</label>
           <select id="playerColorSelect">
             <option value="white">Play as White</option>
             <option value="black">Play as Black</option>

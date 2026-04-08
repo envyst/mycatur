@@ -96,6 +96,8 @@ function buildPgnText(moveEntries) {
 
 function buildSessionPayload(state, move = null) {
   return {
+    name: state.sessionName || null,
+    ruleset: state.isSpecialized ? 'specialized' : 'normal',
     status: state.winner || state.isDraw ? 'finished' : 'active',
     result: inferResult(state),
     currentTurn: state.currentTurn,
@@ -218,6 +220,7 @@ export function createGame() {
     replayBoard: null,
     engine: createEngine(),
     aiThinking: false,
+    isSpecialized: false,
   };
 
   function updateGameStatus() {
@@ -428,6 +431,11 @@ export function createGame() {
     if (state.mode !== 'human-vs-ai') return;
     if (state.currentTurn === state.playerColor) return;
 
+    document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
+      state.isSpecialized = event.target.checked;
+      redraw();
+    });
+
     try {
       state.aiThinking = true;
       state.statusMessage = 'AI is thinking...';
@@ -490,6 +498,7 @@ export function createGame() {
     if (!state.engine) state.engine = createEngine();
     state.sessionId = sessionRow.id;
     state.mode = sessionRow.mode === 'human-vs-ai' ? 'human-vs-ai' : GAME_MODES.HUMAN_VS_HUMAN;
+    state.isSpecialized = sessionRow.ruleset === 'specialized';
     if (state.user) {
       if (sessionRow.white_user_id === state.user.id) state.playerColor = 'white';
       else if (sessionRow.black_user_id === state.user.id) state.playerColor = 'black';
@@ -546,6 +555,7 @@ export function createGame() {
       replayBoard: null,
       engine: createEngine(),
       aiThinking: false,
+      isSpecialized: state.isSpecialized,
     };
     redraw();
   }
@@ -589,6 +599,11 @@ export function createGame() {
 
   async function handleLogin() {
     const { username, password } = getLoginFormValues();
+    document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
+      state.isSpecialized = event.target.checked;
+      redraw();
+    });
+
     try {
       const data = await api.login(username, password);
       state.user = data.user;
@@ -616,7 +631,8 @@ export function createGame() {
     }
     const values = getNewSessionValues();
     const mode = values.mode === 'human-vs-ai' ? 'human-vs-ai' : 'human-vs-human';
-    const data = await api.createSession({ mode, side: values.side, name: values.name });
+    const ruleset = values.specialized ? 'specialized' : 'normal';
+    const data = await api.createSession({ mode, side: values.side, name: values.name, ruleset });
     await refreshSessions();
     await loadSession(data.session.id);
   }
@@ -637,6 +653,11 @@ export function createGame() {
       onReplayPrev: () => { if (state.replayStates.length) { state.replayIndex = Math.max(0, state.replayIndex - 1); state.replayBoard = state.replayStates[state.replayIndex].board; redraw(); } },
       onReplayNext: () => { if (state.replayStates.length) { state.replayIndex = Math.min(state.replayStates.length - 1, state.replayIndex + 1); state.replayBoard = state.replayStates[state.replayIndex].board; redraw(); } },
       onReplayEnd: () => { if (state.replayStates.length) { state.replayIndex = state.replayStates.length - 1; state.replayBoard = null; redraw(); } },
+    });
+
+    document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
+      state.isSpecialized = event.target.checked;
+      redraw();
     });
 
     try {

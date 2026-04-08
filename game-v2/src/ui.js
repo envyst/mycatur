@@ -133,16 +133,17 @@ export function renderStatus(state) {
 
   const sessionBit = state.sessionId ? ` | Session: ${state.sessionId.slice(0, 8)}` : '';
   const readOnlyBit = state.readOnly ? ' | Read-only history view' : '';
-  const modeLabel = state.mode === 'human-vs-ai' ? 'Human vs AI' : state.mode === 'specialized' ? 'Specialized Mode' : 'Human vs Human';
+  const modeLabel = state.mode === 'human-vs-ai' ? 'Human vs AI' : 'Human vs Human';
+  const rulesetBit = state.isSpecialized ? ' | Ruleset: Specialized' : ' | Ruleset: Normal';
   const extra = state.statusMessage ? ` | ${state.statusMessage}` : '';
-  statusEl.textContent = `Mode: ${modeLabel} | Current turn: ${state.currentTurn}${extra}${sessionBit}${readOnlyBit}`;
+  statusEl.textContent = `Mode: ${modeLabel}${rulesetBit} | Current turn: ${state.currentTurn}${extra}${sessionBit}${readOnlyBit}`;
 }
 
 export function renderSpecializedSetup(state, onAssign) {
   const wrap = document.getElementById('specializedSetup');
   wrap.innerHTML = '';
 
-  if (state.mode !== 'specialized' || state.started) {
+  if (!state.isSpecialized || state.started) {
     wrap.innerHTML = '<div class="item-meta">Specialized assignment appears only before starting a specialized game.</div>';
     return;
   }
@@ -382,6 +383,7 @@ export function renderSessions(sessions, onOpenSession, onDeleteSession, onRenam
 export function syncControls(state) {
   document.getElementById('modeSelect').value = state.mode;
   document.getElementById('playerColorSelect').value = state.playerColor;
+  document.getElementById('rulesetSpecializedToggle').checked = Boolean(state.isSpecialized);
 }
 
 export function getLoginFormValues() {
@@ -396,5 +398,6 @@ export function getNewSessionValues() {
     mode: document.getElementById('newSessionModeSelect').value,
     side: document.getElementById('newSessionSideSelect').value,
     name: document.getElementById('newSessionNameInput').value.trim(),
+    specialized: document.getElementById('newSessionSpecializedToggle').checked,
   };
 }
