@@ -13,10 +13,9 @@ function getDisplayCols(playerColor) {
     : [7, 6, 5, 4, 3, 2, 1, 0];
 }
 
-function coordLabel(row, col) {
-  return `${'abcdefgh'[col]}${8 - row}`;
+function sandboxPieceTypes() {
+  return [PIECE_TYPES.KING, PIECE_TYPES.QUEEN, PIECE_TYPES.ROOK, PIECE_TYPES.BISHOP, PIECE_TYPES.KNIGHT, PIECE_TYPES.PAWN];
 }
-
 
 export function renderBoardBanner(state) {
   const banner = document.getElementById('boardBanner');
@@ -45,7 +44,6 @@ export function renderBoardBanner(state) {
     banner.classList.add('show', 'draw');
     title.textContent = 'DRAW';
     subtitle.textContent = state.statusMessage || 'Game ended in a draw.';
-    return;
   }
 }
 
@@ -54,10 +52,7 @@ export function renderBoard(state, onSquareClick) {
   boardEl.innerHTML = '';
 
   const selected = state.selectedSquare;
-  const validTargets = selected
-    ? state.validMoves.map(move => `${move.row}:${move.col}`)
-    : [];
-
+  const validTargets = selected ? state.validMoves.map(move => `${move.row}:${move.col}`) : [];
   const displayRows = getDisplayRows(state.playerColor);
   const displayCols = getDisplayCols(state.playerColor);
   const boardToRender = state.replayBoard || state.board;
@@ -76,7 +71,6 @@ export function renderBoard(state, onSquareClick) {
       if (!state.replayBoard && selected && selected.row === rowIndex && selected.col === colIndex) {
         square.classList.add('selected');
       }
-
       if (!state.replayBoard && validTargets.includes(`${rowIndex}:${colIndex}`)) {
         square.classList.add('target');
       }
@@ -185,7 +179,7 @@ export function renderStatus(state) {
   const sessionBit = state.sessionId ? ` | Session: ${state.sessionId.slice(0, 8)}` : '';
   const readOnlyBit = state.readOnly ? ' | Read-only history view' : '';
   const modeLabel = state.mode === 'human-vs-ai' ? 'Human vs AI' : 'Human vs Human';
-  const rulesetBit = state.isSpecialized ? ' | Ruleset: Specialized' : ' | Ruleset: Normal';
+  const rulesetBit = state.isSandbox ? ' | Ruleset: Sandbox' : state.isSpecialized ? ' | Ruleset: Specialized' : ' | Ruleset: Normal';
   const extra = state.statusMessage ? ` | ${state.statusMessage}` : '';
   statusEl.textContent = `Mode: ${modeLabel}${rulesetBit} | Current turn: ${state.currentTurn}${extra}${sessionBit}${readOnlyBit}`;
 }
@@ -286,6 +280,40 @@ export function renderSpecializedSetup(state, onAssign) {
   });
 }
 
+export function renderSandboxControls(state, handlers) {
+  const section = document.getElementById('sandboxSection');
+  const status = document.getElementById('sandboxStatus');
+  const summonColor = document.getElementById('sandboxSummonColor');
+  const summonType = document.getElementById('sandboxSummonType');
+  const summonButton = document.getElementById('sandboxSummonButton');
+  const deleteButton = document.getElementById('sandboxDeleteButton');
+  const undoButton = document.getElementById('sandboxUndoButton');
+  const aiButton = document.getElementById('sandboxAskAiButton');
+
+  if (!section) return;
+
+  section.style.display = state.isSandbox ? 'block' : 'none';
+  if (!state.isSandbox) return;
+
+  summonType.innerHTML = '';
+  sandboxPieceTypes().forEach(type => {
+    const opt = document.createElement('option');
+    opt.value = type;
+    opt.textContent = type;
+    summonType.appendChild(opt);
+  });
+
+  const selected = state.selectedSquare ? `${'abcdefgh'[state.selectedSquare.col]}${8 - state.selectedSquare.row}` : 'none';
+  status.textContent = `Selected square: ${selected}. Click any piece, then any square to move it freely.`;
+
+  summonButton.onclick = () => handlers.onSandboxSummon(summonColor.value, summonType.value);
+  deleteButton.onclick = () => handlers.onSandboxDelete();
+  undoButton.onclick = () => handlers.onSandboxUndo();
+  aiButton.onclick = () => handlers.onSandboxAskAi();
+
+  aiButton.style.display = state.mode === 'human-vs-ai' ? 'inline-block' : 'none';
+}
+
 export function renderMoveLog(state, onJumpToMove) {
   const logEl = document.getElementById('moveLog');
   logEl.innerHTML = '';
@@ -330,7 +358,6 @@ export function renderPromotionControls(state, onPromote) {
   }
 
   const choicesEl = document.getElementById('promotionChoices');
-
   if (!state.pendingPromotion || state.readOnly || state.replayBoard) {
     section.style.display = 'none';
     choicesEl.innerHTML = '';
@@ -340,7 +367,6 @@ export function renderPromotionControls(state, onPromote) {
   section.style.display = 'block';
   const choices = [PIECE_TYPES.QUEEN, PIECE_TYPES.ROOK, PIECE_TYPES.BISHOP, PIECE_TYPES.KNIGHT];
   choicesEl.innerHTML = '';
-
   choices.forEach(type => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -357,14 +383,10 @@ export function renderReplayControls(state) {
   document.getElementById('replayPrevButton').disabled = disabled;
   document.getElementById('replayNextButton').disabled = disabled;
   document.getElementById('replayEndButton').disabled = disabled;
-  replayStatus.textContent = disabled
-    ? 'Load a saved session to replay moves.'
-    : state.replayBoard
-      ? `Replay step ${state.replayIndex}/${state.replayStates.length - 1}`
-      : 'Live board view';
+  replayStatus.textContent = disabled ? 'Load a saved session to replay moves.' : state.replayBoard ? `Replay step ${state.replayIndex}/${state.replayStates.length - 1}` : 'Live board view';
 }
 
-export function bindControls({ onReset, onModeChange, onPlayerColorChange, onStart, onLogin, onLogout, onCreateSession, onReplayStart, onReplayPrev, onReplayNext, onReplayEnd }) {
+export function bindControls({ onReset, onModeChange, onPlayerColorChange, onStart, onLogin, onLogout, onCreateSession, onReplayStart, onReplayPrev, onReplayNext, onReplayEnd, onRulesetChange }) {
   document.getElementById('resetButton').addEventListener('click', onReset);
   document.getElementById('startButton').addEventListener('click', onStart);
   document.getElementById('modeSelect').addEventListener('change', event => onModeChange(event.target.value));
@@ -376,6 +398,9 @@ export function bindControls({ onReset, onModeChange, onPlayerColorChange, onSta
   document.getElementById('replayPrevButton').addEventListener('click', onReplayPrev);
   document.getElementById('replayNextButton').addEventListener('click', onReplayNext);
   document.getElementById('replayEndButton').addEventListener('click', onReplayEnd);
+  document.getElementById('rulesetNormalToggle').addEventListener('change', () => onRulesetChange('normal'));
+  document.getElementById('rulesetSpecializedToggle').addEventListener('change', () => onRulesetChange('specialized'));
+  document.getElementById('rulesetSandboxToggle').addEventListener('change', () => onRulesetChange('sandbox'));
 }
 
 export function renderAuth(user, error = '') {
@@ -416,7 +441,6 @@ function sessionResultLabel(session) {
 export function renderSessions(sessions, onOpenSession, onDeleteSession, onRenameSession) {
   const listEl = document.getElementById('sessionList');
   listEl.innerHTML = '';
-
   if (!sessions.length) {
     const empty = document.createElement('div');
     empty.className = 'item';
@@ -427,7 +451,6 @@ export function renderSessions(sessions, onOpenSession, onDeleteSession, onRenam
 
   const active = sessions.filter(session => session.status !== 'finished');
   const finished = sessions.filter(session => session.status === 'finished');
-
   const groups = [
     { title: 'Active Sessions', items: active },
     { title: 'Finished Sessions', items: finished },
@@ -451,7 +474,7 @@ export function renderSessions(sessions, onOpenSession, onDeleteSession, onRenam
       const meta = document.createElement('div');
       meta.className = 'item-meta';
       const userSide = session.white_user_id ? 'White' : session.black_user_id ? 'Black' : '-';
-      const ruleset = session.ruleset === 'specialized' ? 'Specialized' : 'Normal';
+      const ruleset = session.ruleset === 'specialized' ? 'Specialized' : session.ruleset === 'sandbox' ? 'Sandbox' : 'Normal';
       meta.textContent = `You play: ${userSide} | Ruleset: ${ruleset} | Result: ${sessionResultLabel(session)} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
       const actions = document.createElement('div');
       actions.className = 'inline-actions';
@@ -481,7 +504,9 @@ export function renderSessions(sessions, onOpenSession, onDeleteSession, onRenam
 export function syncControls(state) {
   document.getElementById('modeSelect').value = state.mode;
   document.getElementById('playerColorSelect').value = state.playerColor;
+  document.getElementById('rulesetNormalToggle').checked = !state.isSpecialized && !state.isSandbox;
   document.getElementById('rulesetSpecializedToggle').checked = Boolean(state.isSpecialized);
+  document.getElementById('rulesetSandboxToggle').checked = Boolean(state.isSandbox);
   document.getElementById('newSessionSpecializedToggle').checked = Boolean(state.isSpecialized);
 }
 
@@ -500,5 +525,3 @@ export function getNewSessionValues() {
     specialized: document.getElementById('newSessionSpecializedToggle').checked,
   };
 }
-
-// Sandbox UI wiring placeholder added in this checkpoint.

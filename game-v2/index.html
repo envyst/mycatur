@@ -384,7 +384,11 @@
             <option value="human-vs-human">Human vs Human</option>
             <option value="human-vs-ai">Human vs AI</option>
           </select>
-          <label class="item-meta"><input id="rulesetSpecializedToggle" type="checkbox" style="width:auto; margin-right:8px;" /> Specialized ruleset</label>
+          <div class="controls">
+            <label class="item-meta"><input id="rulesetNormalToggle" name="rulesetMode" type="radio" style="width:auto; margin-right:8px;" checked /> Normal ruleset</label>
+            <label class="item-meta"><input id="rulesetSpecializedToggle" name="rulesetMode" type="radio" style="width:auto; margin-right:8px;" /> Specialized ruleset</label>
+            <label class="item-meta"><input id="rulesetSandboxToggle" name="rulesetMode" type="radio" style="width:auto; margin-right:8px;" /> Sandbox mode</label>
+          </div>
           <select id="playerColorSelect">
             <option value="white">Play as White</option>
             <option value="black">Play as Black</option>
@@ -398,6 +402,26 @@
       <div class="section">
         <h2>Specialized Setup</h2>
         <div id="specializedSetup" class="controls"></div>
+      </div>
+
+      <div id="sandboxSection" class="section" style="display:none;">
+        <h2>Sandbox Controls</h2>
+        <div id="sandboxStatus" class="item-meta" style="margin-bottom:10px;"></div>
+        <div class="controls">
+          <select id="sandboxSummonColor">
+            <option value="white">White</option>
+            <option value="black">Black</option>
+          </select>
+          <select id="sandboxSummonType"></select>
+          <div class="inline-actions">
+            <button id="sandboxSummonButton">Summon to selected square</button>
+            <button id="sandboxDeleteButton" class="danger">Delete selected piece</button>
+            <button id="sandboxUndoButton" class="secondary">Undo</button>
+          </div>
+          <div class="inline-actions">
+            <button id="sandboxAskAiButton" class="secondary">Ask AI Move</button>
+          </div>
+        </div>
       </div>
 
       <div class="section">
