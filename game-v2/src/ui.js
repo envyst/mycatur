@@ -13,6 +13,17 @@ function getDisplayCols(playerColor) {
     : [7, 6, 5, 4, 3, 2, 1, 0];
 }
 
+function abbreviateSandboxMarker(text) {
+  const raw = (text || '').trim();
+  if (!raw) return '';
+  if (raw.length <= 4) return raw;
+  const parts = raw.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return parts.map(part => part[0].toUpperCase()).join('.');
+  }
+  return raw.slice(0, 4).toUpperCase();
+}
+
 function sandboxPieceTypes() {
   return [PIECE_TYPES.KING, PIECE_TYPES.QUEEN, PIECE_TYPES.ROOK, PIECE_TYPES.BISHOP, PIECE_TYPES.KNIGHT, PIECE_TYPES.PAWN];
 }
@@ -91,9 +102,11 @@ export function renderBoard(state, onSquareClick) {
         span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}` : getPieceLabel(piece);
         square.appendChild(span);
 
-        if (assigned) {
+        const customMarker = piece?.customMarker ? abbreviateSandboxMarker(piece.customMarker) : '';
+
+        if (assigned || customMarker) {
           const marker = document.createElement('span');
-          marker.textContent = specializationMarkerLabel(assigned.specialization);
+          marker.textContent = customMarker || specializationMarkerLabel(assigned.specialization);
           marker.style.position = 'absolute';
           marker.style.top = '4px';
           marker.style.right = '4px';
@@ -101,8 +114,9 @@ export function renderBoard(state, onSquareClick) {
           marker.style.fontWeight = '800';
           marker.style.padding = '2px 5px';
           marker.style.borderRadius = '999px';
-          marker.style.background = 'rgba(0, 0, 0, 0.92)';
+          marker.style.background = customMarker ? 'rgba(35, 79, 35, 0.96)' : 'rgba(0, 0, 0, 0.92)';
           marker.style.color = '#fff';
+          if (customMarker && piece.customMarker) { span.title = `${getPieceLabel(piece)} — marker: ${piece.customMarker}`; }
           marker.style.zIndex = '2';
           marker.style.pointerEvents = 'none';
           square.appendChild(marker);
@@ -288,6 +302,9 @@ export function renderSandboxControls(state, handlers) {
   const summonButton = document.getElementById('sandboxSummonButton');
   const deleteButton = document.getElementById('sandboxDeleteButton');
   const undoButton = document.getElementById('sandboxUndoButton');
+  const markerInput = document.getElementById('sandboxMarkerInput');
+  const applyMarkerButton = document.getElementById('sandboxApplyMarkerButton');
+  const clearMarkerButton = document.getElementById('sandboxClearMarkerButton');
   const aiWhiteButton = document.getElementById('sandboxAskAiWhiteButton');
   const aiBlackButton = document.getElementById('sandboxAskAiBlackButton');
 
@@ -310,6 +327,8 @@ export function renderSandboxControls(state, handlers) {
   summonButton.onclick = () => handlers.onSandboxSummon(summonColor.value, summonType.value);
   deleteButton.onclick = () => handlers.onSandboxDelete();
   undoButton.onclick = () => handlers.onSandboxUndo();
+  applyMarkerButton.onclick = () => handlers.onSandboxApplyMarker(markerInput.value);
+  clearMarkerButton.onclick = () => handlers.onSandboxClearMarker();
   aiWhiteButton.onclick = () => handlers.onSandboxAskAi('white');
   aiBlackButton.onclick = () => handlers.onSandboxAskAi('black');
 

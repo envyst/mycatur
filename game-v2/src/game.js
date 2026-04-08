@@ -278,6 +278,34 @@ export function createGame() {
     return true;
   }
 
+
+  function sandboxApplyCustomMarker(textValue) {
+    if (!state.selectedSquare) return false;
+    const piece = getPiece(state.board, state.selectedSquare.row, state.selectedSquare.col);
+    if (!piece) return false;
+    pushSandboxHistorySnapshot();
+    state.board[state.selectedSquare.row][state.selectedSquare.col] = {
+      ...piece,
+      customMarker: (textValue || '').trim(),
+    };
+    state.statusMessage = `Applied marker to ${piece.color} ${piece.type}.`;
+    redraw();
+    return true;
+  }
+
+  function sandboxClearCustomMarker() {
+    if (!state.selectedSquare) return false;
+    const piece = getPiece(state.board, state.selectedSquare.row, state.selectedSquare.col);
+    if (!piece) return false;
+    pushSandboxHistorySnapshot();
+    const nextPiece = { ...piece };
+    delete nextPiece.customMarker;
+    state.board[state.selectedSquare.row][state.selectedSquare.col] = nextPiece;
+    state.statusMessage = `Cleared marker from ${piece.color} ${piece.type}.`;
+    redraw();
+    return true;
+  }
+
   function normalizeAssignmentSlots(assignments) {
     return {
       white: Array.from({ length: 6 }, (_, i) => assignments.white?.[i] || null),
@@ -338,6 +366,8 @@ export function createGame() {
       onSandboxDelete: handleSandboxDelete,
       onSandboxUndo: handleSandboxUndo,
       onSandboxAskAi: handleSandboxAskAi,
+      onSandboxApplyMarker: handleSandboxApplyMarker,
+      onSandboxClearMarker: handleSandboxClearMarker,
     });
     renderReplayControls(state);
     syncControls(state);
@@ -465,6 +495,32 @@ export function createGame() {
       return;
     }
     sandboxDeletePiece(state.selectedSquare.row, state.selectedSquare.col);
+  }
+
+  function handleSandboxApplyMarker(textValue) {
+    if (!state.isSandbox) return;
+    if (!state.selectedSquare) {
+      state.statusMessage = 'Select a piece first to apply a marker.';
+      redraw();
+      return;
+    }
+    if (!sandboxApplyCustomMarker(textValue)) {
+      state.statusMessage = 'Select a piece first to apply a marker.';
+      redraw();
+    }
+  }
+
+  function handleSandboxClearMarker() {
+    if (!state.isSandbox) return;
+    if (!state.selectedSquare) {
+      state.statusMessage = 'Select a piece first to clear a marker.';
+      redraw();
+      return;
+    }
+    if (!sandboxClearCustomMarker()) {
+      state.statusMessage = 'Select a piece first to clear a marker.';
+      redraw();
+    }
   }
 
   function handleSandboxUndo() {
