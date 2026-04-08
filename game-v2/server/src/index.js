@@ -85,7 +85,7 @@ app.get('/api/me', (req, res) => {
 app.get('/api/sessions', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const result = await pool.query(
-    `SELECT id, name, mode, ruleset, status, result, current_turn, pgn_text, updated_at, created_at,
+    `SELECT id, name, mode, ruleset, specialized_assignments_json, status, result, current_turn, pgn_text, updated_at, created_at,
             white_user_id, black_user_id
      FROM game_sessions
      WHERE white_user_id = $1 OR black_user_id = $1
@@ -96,7 +96,7 @@ app.get('/api/sessions', requireAuth, async (req, res) => {
 });
 
 app.post('/api/sessions', requireAuth, async (req, res) => {
-  const { mode = 'human-vs-human', side = 'white', name = '', ruleset = 'normal' } = req.body || {};
+  const { mode = 'human-vs-human', side = 'white', name = '', ruleset = 'normal', specializedAssignments = { white: [], black: [] } } = req.body || {};
   const userId = req.session.user.id;
   const initial = createInitialGameState(mode);
 
@@ -106,10 +106,10 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
 
   const result = await pool.query(
     `INSERT INTO game_sessions (
-      name, white_user_id, black_user_id, mode, ruleset, status, result, current_turn,
+      name, white_user_id, black_user_id, mode, ruleset, specialized_assignments_json, status, result, current_turn,
       board_state_json, castling_rights_json, en_passant_target_json,
       halfmove_clock, fullmove_number, position_history_json, pgn_text
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
     RETURNING *`,
     [
       name || null,
@@ -117,6 +117,7 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
       blackUserId,
       initial.mode,
       ruleset,
+      JSON.stringify(specializedAssignments),
       initial.status,
       initial.result,
       initial.currentTurn,
@@ -159,6 +160,7 @@ app.put('/api/sessions/:id', requireAuth, async (req, res) => {
   const {
     name,
     ruleset,
+    specializedAssignments,
     status,
     result,
     currentTurn,
@@ -188,24 +190,26 @@ app.put('/api/sessions/:id', requireAuth, async (req, res) => {
     `UPDATE game_sessions SET
       name = COALESCE($2, name),
       ruleset = COALESCE($3, ruleset),
-      status = $4,
-      result = $5,
-      current_turn = $6,
-      board_state_json = $7,
-      castling_rights_json = $8,
-      en_passant_target_json = $9,
-      halfmove_clock = $10,
-      fullmove_number = $11,
-      position_history_json = $12,
-      pgn_text = $13,
+      specialized_assignments_json = COALESCE($4, specialized_assignments_json),
+      status = $5,
+      result = $6,
+      current_turn = $7,
+      board_state_json = $8,
+      castling_rights_json = $9,
+      en_passant_target_json = $10,
+      halfmove_clock = $11,
+      fullmove_number = $12,
+      position_history_json = $13,
+      pgn_text = $14,
       updated_at = NOW(),
-      finished_at = CASE WHEN $4 = 'finished' THEN NOW() ELSE NULL END
+      finished_at = CASE WHEN $5 = 'finished' THEN NOW() ELSE NULL END
      WHERE id = $1
      RETURNING *`,
     [
       req.params.id,
       name || null,
       ruleset || null,
+      specializedAssignments ? JSON.stringify(specializedAssignments) : null,
       status,
       result,
       currentTurn,
@@ -261,6 +265,7 @@ app.get('*', (_req, res) => {
 async function runMigrations() {
   await pool.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS name TEXT`);
   await pool.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS ruleset TEXT NOT NULL DEFAULT 'normal'`);
+  await pool.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS specialized_assignments_json JSONB NOT NULL DEFAULT '{"white":[],"black":[]}'::jsonb`);
 }
 
 async function start() {

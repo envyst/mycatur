@@ -19,7 +19,7 @@ import {
 } from './ui.js';
 import { api } from './api.js';
 import { createEngine } from './engine.js';
-import { setAssignment } from './specialized.js';
+import { createEmptyAssignments } from './specialized.js';
 
 function sameSquare(a, b) {
   return a && b && a.row === b.row && a.col === b.col;
@@ -98,6 +98,7 @@ function buildSessionPayload(state, move = null) {
   return {
     name: state.sessionName || null,
     ruleset: state.isSpecialized ? 'specialized' : 'normal',
+    specializedAssignments: state.specializedAssignments,
     status: state.winner || state.isDraw ? 'finished' : 'active',
     result: inferResult(state),
     currentTurn: state.currentTurn,
@@ -435,6 +436,10 @@ export function createGame() {
       state.isSpecialized = event.target.checked;
       redraw();
     });
+    document.getElementById('newSessionSpecializedToggle').addEventListener('change', event => {
+      state.isSpecialized = event.target.checked;
+      redraw();
+    });
 
     try {
       state.aiThinking = true;
@@ -510,6 +515,7 @@ export function createGame() {
     state.halfmoveClock = sessionRow.halfmove_clock;
     state.fullmoveNumber = sessionRow.fullmove_number;
     state.positionHistory = sessionRow.position_history_json || {};
+    state.specializedAssignments = sessionRow.specialized_assignments_json || createEmptyAssignments();
     state.moveHistory = moves.map(move => move.san);
     state.moveLog = state.moveHistory.map((san, index) => formatMoveEntry(index, san));
     state.started = true;
@@ -556,6 +562,7 @@ export function createGame() {
       engine: createEngine(),
       aiThinking: false,
       isSpecialized: state.isSpecialized,
+      specializedAssignments: createEmptyAssignments(),
     };
     redraw();
   }
@@ -573,8 +580,20 @@ export function createGame() {
 
 
 
-  function handleSpecializedAssignment(side, square, pieceType, specialization) {
-    state.specializedAssignments = setAssignment(state.specializedAssignments, side, square, pieceType, specialization);
+  function handleSpecializedAssignment(side, index, assignment) {
+    const next = structuredClone(state.specializedAssignments || createEmptyAssignments());
+    if (!assignment || !assignment.square || !assignment.specialization) {
+      next[side][index] = null;
+    } else {
+      const duplicate = next[side].some((item, idx) => idx !== index && item && item.square === assignment.square);
+      if (duplicate) {
+        redraw();
+        return;
+      }
+      next[side][index] = assignment;
+    }
+    next[side] = next[side].filter(Boolean).slice(0, 6);
+    state.specializedAssignments = next;
     redraw();
   }
 
@@ -600,6 +619,10 @@ export function createGame() {
   async function handleLogin() {
     const { username, password } = getLoginFormValues();
     document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
+      state.isSpecialized = event.target.checked;
+      redraw();
+    });
+    document.getElementById('newSessionSpecializedToggle').addEventListener('change', event => {
       state.isSpecialized = event.target.checked;
       redraw();
     });
@@ -632,7 +655,7 @@ export function createGame() {
     const values = getNewSessionValues();
     const mode = values.mode === 'human-vs-ai' ? 'human-vs-ai' : 'human-vs-human';
     const ruleset = values.specialized ? 'specialized' : 'normal';
-    const data = await api.createSession({ mode, side: values.side, name: values.name, ruleset });
+    const data = await api.createSession({ mode, side: values.side, name: values.name, ruleset, specializedAssignments: state.isSpecialized ? state.specializedAssignments : createEmptyAssignments() });
     await refreshSessions();
     await loadSession(data.session.id);
   }
@@ -656,6 +679,10 @@ export function createGame() {
     });
 
     document.getElementById('rulesetSpecializedToggle').addEventListener('change', event => {
+      state.isSpecialized = event.target.checked;
+      redraw();
+    });
+    document.getElementById('newSessionSpecializedToggle').addEventListener('change', event => {
       state.isSpecialized = event.target.checked;
       redraw();
     });

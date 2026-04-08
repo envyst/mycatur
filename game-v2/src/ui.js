@@ -13,6 +13,10 @@ function getDisplayCols(playerColor) {
     : [7, 6, 5, 4, 3, 2, 1, 0];
 }
 
+function pieceLabelForSquare(square, pieceType) {
+  return `${square} — ${pieceType}`;
+}
+
 export function renderBoardBanner(state) {
   const banner = document.getElementById('boardBanner');
   const title = document.getElementById('boardBannerTitle');
@@ -144,7 +148,7 @@ export function renderSpecializedSetup(state, onAssign) {
   wrap.innerHTML = '';
 
   if (!state.isSpecialized || state.started) {
-    wrap.innerHTML = '<div class="item-meta">Specialized assignment appears only before starting a specialized game.</div>';
+    wrap.innerHTML = '<div class="item-meta">Turn on Specialized ruleset before game start to configure assignments.</div>';
     return;
   }
 
@@ -156,40 +160,71 @@ export function renderSpecializedSetup(state, onAssign) {
     title.textContent = `${side.toUpperCase()} assignments (${state.specializedAssignments[side].length}/6)`;
     section.appendChild(title);
 
-    Object.entries(SPECIALIZED_STARTING_SQUARES[side]).forEach(([pieceType, squares]) => {
-      const label = document.createElement('div');
-      label.className = 'item-meta';
-      label.style.marginTop = '8px';
-      label.textContent = pieceType;
-      section.appendChild(label);
+    for (let i = 0; i < 6; i += 1) {
+      const current = state.specializedAssignments[side][i] || null;
+      const row = document.createElement('div');
+      row.className = 'inline-controls';
+      row.style.marginTop = '8px';
 
-      squares.forEach(square => {
-        const row = document.createElement('div');
-        row.className = 'inline-controls';
-        row.style.marginTop = '6px';
-        const squareLabel = document.createElement('div');
-        squareLabel.className = 'item-meta';
-        squareLabel.style.minWidth = '52px';
-        squareLabel.textContent = square;
-        const select = document.createElement('select');
-        const empty = document.createElement('option');
-        empty.value = '';
-        empty.textContent = 'Normal';
-        select.appendChild(empty);
-        (SPECIALIZED_CATALOG[pieceType] || []).forEach(name => {
+      const specSelect = document.createElement('select');
+      const specEmpty = document.createElement('option');
+      specEmpty.value = '';
+      specEmpty.textContent = 'Select specialized piece';
+      specSelect.appendChild(specEmpty);
+      Object.entries(SPECIALIZED_CATALOG).forEach(([pieceType, names]) => {
+        names.forEach(name => {
           const opt = document.createElement('option');
-          opt.value = name;
+          opt.value = `${pieceType}::${name}`;
           opt.textContent = name;
-          select.appendChild(opt);
+          if (current && current.pieceType === pieceType && current.specialization === name) {
+            opt.selected = true;
+          }
+          specSelect.appendChild(opt);
         });
-        const current = (state.specializedAssignments[side] || []).find(item => item.square === square);
-        select.value = current?.specialization || '';
-        select.addEventListener('change', event => onAssign(side, square, pieceType, event.target.value));
-        row.appendChild(squareLabel);
-        row.appendChild(select);
-        section.appendChild(row);
       });
-    });
+
+      const pieceSelect = document.createElement('select');
+      const pieceEmpty = document.createElement('option');
+      pieceEmpty.value = '';
+      pieceEmpty.textContent = 'Assign to piece';
+      pieceSelect.appendChild(pieceEmpty);
+
+      const selectedSpec = specSelect.value ? specSelect.value.split('::') : null;
+      const selectedType = current?.pieceType || selectedSpec?.[0] || null;
+      const selectedName = current?.specialization || selectedSpec?.[1] || '';
+      if (selectedType) {
+        (SPECIALIZED_STARTING_SQUARES[side][selectedType] || []).forEach(square => {
+          const opt = document.createElement('option');
+          opt.value = square;
+          opt.textContent = pieceLabelForSquare(square, selectedType);
+          if (current?.square === square) {
+            opt.selected = true;
+          }
+          pieceSelect.appendChild(opt);
+        });
+      }
+
+      specSelect.addEventListener('change', () => {
+        const value = specSelect.value;
+        if (!value) {
+          onAssign(side, i, null);
+          return;
+        }
+        const [pieceType, specialization] = value.split('::');
+        onAssign(side, i, { pieceType, specialization, square: '' });
+      });
+
+      pieceSelect.addEventListener('change', () => {
+        const value = specSelect.value;
+        if (!value) return;
+        const [pieceType, specialization] = value.split('::');
+        onAssign(side, i, { pieceType, specialization, square: pieceSelect.value });
+      });
+
+      row.appendChild(specSelect);
+      row.appendChild(pieceSelect);
+      section.appendChild(row);
+    }
 
     wrap.appendChild(section);
   });
@@ -293,6 +328,8 @@ export function renderAuth(user, error = '') {
   const authState = document.getElementById('authState');
   const currentUser = document.getElementById('currentUser');
   const loginError = document.getElementById('loginError');
+  const createArea = document.getElementById('sessionCreateArea');
+  const createHint = document.getElementById('sessionCreateHint');
 
   if (user) {
     loginForm.style.display = 'none';
@@ -300,12 +337,16 @@ export function renderAuth(user, error = '') {
     authState.textContent = 'Authenticated';
     currentUser.textContent = `${user.displayName} (@${user.username})`;
     loginError.textContent = '';
+    createArea.style.display = 'flex';
+    createHint.style.display = 'none';
   } else {
     loginForm.style.display = 'flex';
     userPanel.style.display = 'none';
     authState.textContent = 'Please log in';
     currentUser.textContent = '';
     loginError.textContent = error;
+    createArea.style.display = 'none';
+    createHint.style.display = 'block';
   }
 }
 
@@ -354,7 +395,8 @@ export function renderSessions(sessions, onOpenSession, onDeleteSession, onRenam
       const meta = document.createElement('div');
       meta.className = 'item-meta';
       const userSide = session.white_user_id ? 'White' : session.black_user_id ? 'Black' : '-';
-      meta.textContent = `You play: ${userSide} | Result: ${sessionResultLabel(session)} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
+      const ruleset = session.ruleset === 'specialized' ? 'Specialized' : 'Normal';
+      meta.textContent = `You play: ${userSide} | Ruleset: ${ruleset} | Result: ${sessionResultLabel(session)} | Updated: ${new Date(session.updated_at).toLocaleString()}`;
       const actions = document.createElement('div');
       actions.className = 'inline-actions';
       const openButton = document.createElement('button');
