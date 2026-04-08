@@ -423,7 +423,7 @@ export function createGame() {
     return Boolean(findKing(state.board, COLORS.WHITE) && findKing(state.board, COLORS.BLACK));
   }
 
-  async function handleSandboxAskAi() {
+  async function handleSandboxAskAi(requestedSide) {
     if (!state.isSandbox || state.mode !== 'human-vs-ai' || state.readOnly || state.replayBoard) return;
     if (!isSandboxBoardValidForAi()) {
       state.statusMessage = 'Sandbox AI requires both kings on the board.';
@@ -434,7 +434,8 @@ export function createGame() {
       state.aiThinking = true;
       state.statusMessage = 'Sandbox AI is thinking...';
       redraw();
-      const best = await state.engine.getBestMove(state, { depth: 12 });
+      const aiState = { ...state, currentTurn: requestedSide };
+      const best = await state.engine.getBestMove(aiState, { depth: 12 });
       state.aiThinking = false;
       if (!best) {
         state.statusMessage = 'Sandbox AI could not find a move.';
@@ -446,8 +447,8 @@ export function createGame() {
       state.board[best.to.row][best.to.col] = piece;
       state.board[best.from.row][best.from.col] = null;
       state.lastMove = { from: best.from, to: best.to };
-      state.currentTurn = getOpponentColor(state.currentTurn);
-      state.statusMessage = `Sandbox AI moved ${piece?.type || 'piece'} to ${toChessCoord(best.to.row, best.to.col)}.`;
+      state.currentTurn = getOpponentColor(requestedSide);
+      state.statusMessage = `Sandbox AI (${requestedSide}) moved ${piece?.type || 'piece'} to ${toChessCoord(best.to.row, best.to.col)}.`;
       redraw();
     } catch (error) {
       state.aiThinking = false;
@@ -491,7 +492,8 @@ export function createGame() {
       state.aiThinking = true;
       state.statusMessage = 'AI is thinking...';
       redraw();
-      const best = await state.engine.getBestMove(state, { depth: 12 });
+      const aiState = { ...state, currentTurn: requestedSide };
+      const best = await state.engine.getBestMove(aiState, { depth: 12 });
       if (!best) {
         state.aiThinking = false;
         updateGameStatus();

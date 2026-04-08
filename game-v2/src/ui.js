@@ -288,7 +288,8 @@ export function renderSandboxControls(state, handlers) {
   const summonButton = document.getElementById('sandboxSummonButton');
   const deleteButton = document.getElementById('sandboxDeleteButton');
   const undoButton = document.getElementById('sandboxUndoButton');
-  const aiButton = document.getElementById('sandboxAskAiButton');
+  const aiWhiteButton = document.getElementById('sandboxAskAiWhiteButton');
+  const aiBlackButton = document.getElementById('sandboxAskAiBlackButton');
 
   if (!section) return;
 
@@ -309,9 +310,12 @@ export function renderSandboxControls(state, handlers) {
   summonButton.onclick = () => handlers.onSandboxSummon(summonColor.value, summonType.value);
   deleteButton.onclick = () => handlers.onSandboxDelete();
   undoButton.onclick = () => handlers.onSandboxUndo();
-  aiButton.onclick = () => handlers.onSandboxAskAi();
+  aiWhiteButton.onclick = () => handlers.onSandboxAskAi('white');
+  aiBlackButton.onclick = () => handlers.onSandboxAskAi('black');
 
-  aiButton.style.display = state.mode === 'human-vs-ai' ? 'inline-block' : 'none';
+  const showAi = state.mode === 'human-vs-ai' ? 'inline-block' : 'none';
+  aiWhiteButton.style.display = showAi;
+  aiBlackButton.style.display = showAi;
 }
 
 export function renderMoveLog(state, onJumpToMove) {
