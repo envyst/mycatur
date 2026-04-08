@@ -1,5 +1,16 @@
-import { getPieceLabel, getPieceSymbol } from './pieces.js';
-import { THEME_OPTIONS } from './config.js';
+import { getPieceLabel, getPieceSymbol, PIECE_TYPES } from './pieces.js';
+
+function getDisplayRows(playerColor) {
+  return playerColor === 'white'
+    ? [0, 1, 2, 3, 4, 5, 6, 7]
+    : [7, 6, 5, 4, 3, 2, 1, 0];
+}
+
+function getDisplayCols(playerColor) {
+  return playerColor === 'white'
+    ? [0, 1, 2, 3, 4, 5, 6, 7]
+    : [7, 6, 5, 4, 3, 2, 1, 0];
+}
 
 export function renderBoard(state, onSquareClick) {
   const boardEl = document.getElementById('board');
@@ -10,8 +21,12 @@ export function renderBoard(state, onSquareClick) {
     ? state.validMoves.map(move => `${move.row}:${move.col}`)
     : [];
 
-  state.board.forEach((row, rowIndex) => {
-    row.forEach((piece, colIndex) => {
+  const displayRows = getDisplayRows(state.playerColor);
+  const displayCols = getDisplayCols(state.playerColor);
+
+  displayRows.forEach(rowIndex => {
+    displayCols.forEach(colIndex => {
+      const piece = state.board[rowIndex][colIndex];
       const square = document.createElement('button');
       square.className = `square ${(rowIndex + colIndex) % 2 === 0 ? 'light' : 'dark'}`;
       square.type = 'button';
@@ -28,9 +43,9 @@ export function renderBoard(state, onSquareClick) {
 
       if (piece) {
         const span = document.createElement('span');
-        span.className = 'piece';
+        span.className = `piece ${piece.color === 'white' ? 'white-piece' : 'black-piece'}`;
         span.textContent = getPieceSymbol(piece);
-        span.title = `${piece.color} ${getPieceLabel(piece, state.themes)}`;
+        span.title = getPieceLabel(piece);
         square.appendChild(span);
       }
 
@@ -44,17 +59,23 @@ export function renderStatus(state) {
   const statusEl = document.getElementById('status');
 
   if (!state.started) {
-    statusEl.textContent = 'Choose a mode and theme labels, then start the game.';
+    statusEl.textContent = 'Press Start Game to begin.';
+    return;
+  }
+
+  if (state.pendingPromotion) {
+    statusEl.textContent = `${state.pendingPromotion.color} pawn must be promoted.`;
     return;
   }
 
   if (state.winner) {
-    statusEl.textContent = `${state.winner} wins.`;
+    statusEl.textContent = `${state.winner} wins. ${state.statusMessage || ''}`.trim();
     return;
   }
 
   const modeLabel = state.mode === 'human-vs-engine' ? 'Human vs Engine' : 'Human vs Human';
-  statusEl.textContent = `Mode: ${modeLabel} | Current turn: ${state.currentTurn}`;
+  const extra = state.statusMessage ? ` | ${state.statusMessage}` : '';
+  statusEl.textContent = `Mode: ${modeLabel} | Current turn: ${state.currentTurn}${extra}`;
 }
 
 export function renderMoveLog(state) {
@@ -77,6 +98,41 @@ export function renderMoveLog(state) {
   });
 }
 
+export function renderPromotionControls(state, onPromote) {
+  let section = document.getElementById('promotionSection');
+  if (!section) {
+    section = document.createElement('div');
+    section.id = 'promotionSection';
+    section.className = 'section';
+    section.innerHTML = `
+      <h2>Promotion</h2>
+      <div id="promotionChoices" class="controls"></div>
+    `;
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.appendChild(section);
+  }
+
+  const choicesEl = document.getElementById('promotionChoices');
+
+  if (!state.pendingPromotion) {
+    section.style.display = 'none';
+    choicesEl.innerHTML = '';
+    return;
+  }
+
+  section.style.display = 'block';
+  const choices = [PIECE_TYPES.QUEEN, PIECE_TYPES.ROOK, PIECE_TYPES.BISHOP, PIECE_TYPES.KNIGHT];
+  choicesEl.innerHTML = '';
+
+  choices.forEach(type => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = `Promote to ${type}`;
+    btn.addEventListener('click', () => onPromote(type));
+    choicesEl.appendChild(btn);
+  });
+}
+
 export function bindControls({ onReset, onModeChange, onPlayerColorChange, onStart }) {
   document.getElementById('resetButton').addEventListener('click', onReset);
   document.getElementById('startButton').addEventListener('click', onStart);
@@ -84,29 +140,7 @@ export function bindControls({ onReset, onModeChange, onPlayerColorChange, onSta
   document.getElementById('playerColorSelect').addEventListener('change', event => onPlayerColorChange(event.target.value));
 }
 
-export function initThemeSelectors(currentThemes, onThemeChange) {
-  for (const [pieceType, options] of Object.entries(THEME_OPTIONS)) {
-    const el = document.getElementById(`${pieceType}ThemeSelect`);
-    el.innerHTML = '';
-    options.forEach(label => {
-      const opt = document.createElement('option');
-      opt.value = label;
-      opt.textContent = label;
-      if (currentThemes[pieceType] === label) {
-        opt.selected = true;
-      }
-      el.appendChild(opt);
-    });
-    el.addEventListener('change', event => onThemeChange(pieceType, event.target.value));
-  }
-}
-
 export function syncControls(state) {
   document.getElementById('modeSelect').value = state.mode;
   document.getElementById('playerColorSelect').value = state.playerColor;
-
-  for (const pieceType of Object.keys(THEME_OPTIONS)) {
-    const el = document.getElementById(`${pieceType}ThemeSelect`);
-    if (el) el.value = state.themes[pieceType];
-  }
 }

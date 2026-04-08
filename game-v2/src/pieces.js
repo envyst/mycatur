@@ -1,5 +1,3 @@
-import { DEFAULT_THEME_SELECTION } from './config.js';
-
 export const PIECE_TYPES = {
   KING: 'king',
   QUEEN: 'queen',
@@ -28,19 +26,9 @@ export const PIECE_SYMBOLS = {
   },
 };
 
-export function createThemeSelection(overrides = {}) {
-  return {
-    ...DEFAULT_THEME_SELECTION,
-    ...overrides,
-  };
-}
-
-export function getPieceLabel(piece, themes) {
+export function getPieceLabel(piece) {
   if (!piece) return '';
-  if (piece.type === PIECE_TYPES.KING) {
-    return piece.color === 'white' ? 'White King' : 'Black King';
-  }
-  return themes[piece.type] || piece.type;
+  return `${piece.color} ${piece.type}`;
 }
 
 export function getPieceSymbol(piece) {

@@ -2,46 +2,40 @@
 
 Structured rebuild area for the `mycatur` chess project.
 
-## Current status
-This is the new modular base for the game.
+## Current direction
+This app is now focused on one thing first:
+- become a correct, playable **normal chess** game
 
-Current goals:
-- normal chess should work first
-- human vs human should work first
-- human vs engine should work in a lightweight placeholder way first
-- special pieces currently only affect naming/theme
-- no special powers are active yet
+For now:
+- no specialized piece mechanics
+- no specialized piece setup UI
+- no special powers
 
 ## Current structure
-- `index.html` — app shell and current basic styling
-- `src/config.js` — constants, modes, and theme options
-- `src/pieces.js` — piece symbols and specialized labels
-- `src/state.js` — initial state / starting board
+- `index.html` — app shell and current styling
+- `src/config.js` — constants and mode names
+- `src/pieces.js` — piece types and symbols
+- `src/state.js` — initial board and game state
 - `src/board.js` — movement helpers and board logic
 - `src/game.js` — gameplay flow and interaction handling
 - `src/ui.js` — DOM rendering and controls
 - `src/main.js` — startup entrypoint
-- `docs/ARCHITECTURE.md` — current architecture/intent note
+- `docs/CURRENT_STATE.md` — current state summary
+- `docs/IMPLEMENTATION_PLAN.md` — implementation plan
+- `docs/HANDOFF.md` — handover notes
 
-## Current working direction
-The current implementation is intentionally simplified:
-- standard chess movement only
-- no power system
-- no special piece abilities
-- engine mode currently uses a simple placeholder random move loop until Stockfish is integrated
+## Important status note
+The current implementation is a structured baseline, not yet full rules-complete chess.
+The next major work is to complete full chess rules correctly before revisiting engine quality or UI redesign.
 
-## How to open
-At minimum, this can be opened as a static HTML app.
-
-For local development, use a simple local server:
-
+## Local run
 ```bash
 cd /root/.openclaw/project/mycatur
 python3 -m http.server 8000
 ```
 
-Then open:
+Open:
 - `http://127.0.0.1:8000/game-v2/`
 
-## Deploy direction
-This directory is intended to be containerized and served behind nginx later on `mycatur.envyst.asia`.
+## Live site
+- `https://mycatur.envyst.asia`

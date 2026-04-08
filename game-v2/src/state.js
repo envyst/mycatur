@@ -1,5 +1,5 @@
 import { COLORS, GAME_MODES } from './config.js';
-import { PIECE_TYPES, createThemeSelection } from './pieces.js';
+import { PIECE_TYPES } from './pieces.js';
 
 function createBackRank(color) {
   return [
@@ -42,6 +42,11 @@ export function createInitialState(options = {}) {
     moveLog: [],
     winner: null,
     started: false,
-    themes: createThemeSelection(options.themes),
+    castlingRights: {
+      white: { kingSide: true, queenSide: true },
+      black: { kingSide: true, queenSide: true },
+    },
+    enPassantTarget: null,
+    pendingPromotion: null,
   };
 }

@@ -12,12 +12,11 @@
       --text: #eef2ff;
       --muted: #aab4d6;
       --accent: #6ea8fe;
-      --accent-2: #8b5cf6;
       --light-square: #f0d9b5;
       --dark-square: #b58863;
       --highlight: rgba(110, 168, 254, 0.35);
-      --danger: #ff7b7b;
       --ok: #73e2a7;
+      --warn: #fbbf24;
     }
 
     * { box-sizing: border-box; }
@@ -55,10 +54,12 @@
       aspect-ratio: 1 / 1;
       display: grid;
       grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
       border-radius: 14px;
       overflow: hidden;
       margin: 0 auto;
       border: 2px solid rgba(255,255,255,0.1);
+      background: #0f1220;
     }
 
     .square {
@@ -66,11 +67,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
       font-size: clamp(24px, 4vw, 48px);
       user-select: none;
       cursor: pointer;
       border: none;
       padding: 0;
+      border-radius: 0;
+      appearance: none;
+      -webkit-appearance: none;
     }
 
     .square.light { background: var(--light-square); }
@@ -87,6 +94,18 @@
       position: relative;
       z-index: 1;
       line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    }
+
+    .piece.white-piece {
+      color: #ffffff;
+    }
+
+    .piece.black-piece {
+      color: #000000;
     }
 
     .sidebar {
@@ -102,13 +121,12 @@
       padding: 16px;
     }
 
-    h1, h2, h3, p { margin: 0; }
+    h1, h2, p { margin: 0; }
     h1 { font-size: 26px; margin-bottom: 8px; }
     h2 { font-size: 16px; margin-bottom: 10px; }
-    h3 { font-size: 14px; margin-bottom: 8px; color: var(--muted); }
     .muted { color: var(--muted); }
 
-    .controls, .setup-controls {
+    .controls {
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -131,10 +149,6 @@
     button.secondary {
       background: rgba(255,255,255,0.09);
       color: var(--text);
-    }
-
-    button.primary-2 {
-      background: var(--accent-2);
     }
 
     select {
@@ -164,26 +178,6 @@
       border-radius: 8px;
     }
 
-    .setup-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .piece-theme-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .piece-theme-row {
-      display: grid;
-      grid-template-columns: 120px 1fr;
-      align-items: center;
-      gap: 10px;
-    }
-
     .badge {
       display: inline-block;
       padding: 4px 8px;
@@ -194,17 +188,63 @@
       color: var(--ok);
     }
 
+    .badge.warn {
+      background: rgba(251, 191, 36, 0.14);
+      color: var(--warn);
+    }
+
     @media (max-width: 960px) {
       .app {
         grid-template-columns: 1fr;
+        padding: 14px;
+        gap: 16px;
+      }
+
+      .board-wrap {
+        padding: 14px;
       }
 
       .board {
-        width: 100%;
+        width: min(100%, calc(100vw - 32px));
       }
 
-      .setup-grid {
-        grid-template-columns: 1fr;
+      .sidebar {
+        padding: 14px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 10px;
+        gap: 12px;
+      }
+
+      .panel,
+      .section {
+        border-radius: 14px;
+      }
+
+      .board-wrap,
+      .sidebar,
+      .section {
+        padding: 12px;
+      }
+
+      .board {
+        width: min(100%, calc(100vw - 24px));
+        border-radius: 12px;
+      }
+
+      .square {
+        font-size: clamp(18px, 7vw, 38px);
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+
+      button, select {
+        min-height: 44px;
       }
     }
   </style>
@@ -218,65 +258,31 @@
     <div class="panel sidebar">
       <div>
         <h1>Mycatur V2</h1>
-        <p class="muted">Normal chess first. Special piece names are cosmetic only for now.</p>
+        <p class="muted">Focused on becoming a complete normal chess game first.</p>
       </div>
 
       <div class="section">
-        <h2>Game Setup</h2>
-        <div class="setup-grid">
-          <div>
-            <h3>Mode</h3>
-            <select id="modeSelect">
-              <option value="human-vs-human">Human vs Human</option>
-              <option value="human-vs-engine">Human vs Engine</option>
-            </select>
-          </div>
-          <div>
-            <h3>Side</h3>
-            <select id="playerColorSelect">
-              <option value="white">Play as White</option>
-              <option value="black">Play as Black</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="piece-theme-grid">
-          <div class="piece-theme-row">
-            <label for="queenThemeSelect">Queen theme</label>
-            <select id="queenThemeSelect"></select>
-          </div>
-          <div class="piece-theme-row">
-            <label for="rookThemeSelect">Rook theme</label>
-            <select id="rookThemeSelect"></select>
-          </div>
-          <div class="piece-theme-row">
-            <label for="bishopThemeSelect">Bishop theme</label>
-            <select id="bishopThemeSelect"></select>
-          </div>
-          <div class="piece-theme-row">
-            <label for="knightThemeSelect">Knight theme</label>
-            <select id="knightThemeSelect"></select>
-          </div>
-          <div class="piece-theme-row">
-            <label for="pawnThemeSelect">Pawn theme</label>
-            <select id="pawnThemeSelect"></select>
-          </div>
-        </div>
-
-        <div class="setup-controls" style="margin-top: 14px;">
-          <button id="startButton" class="primary-2">Start Game</button>
+        <h2>Game Controls</h2>
+        <div class="controls">
+          <select id="modeSelect">
+            <option value="human-vs-human">Human vs Human</option>
+            <option value="human-vs-engine">Human vs Engine</option>
+          </select>
+          <select id="playerColorSelect">
+            <option value="white">Play as White</option>
+            <option value="black">Play as Black</option>
+          </select>
+          <button id="startButton">Start Game</button>
           <button id="resetButton" class="secondary">Reset Game</button>
         </div>
-        <p class="muted" style="margin-top: 10px; font-size: 13px;">
-          Theme choices only change labels for now. No special powers are active.
-        </p>
       </div>
 
       <div class="section">
         <h2>Status</h2>
         <div id="status" class="status-line"></div>
-        <div style="margin-top: 10px;">
-          <span class="badge">Normal chess rules active</span>
+        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="badge">Normal chess only</span>
+          <span class="badge warn">Full rules still in progress</span>
         </div>
       </div>
 
