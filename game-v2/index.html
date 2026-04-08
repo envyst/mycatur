@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mycatur Game V2</title>
+  <style>
+    :root {
+      --bg: #0f1220;
+      --panel: #171b2f;
+      --panel-2: #1d2340;
+      --text: #eef2ff;
+      --muted: #aab4d6;
+      --accent: #6ea8fe;
+      --accent-2: #8b5cf6;
+      --light-square: #f0d9b5;
+      --dark-square: #b58863;
+      --highlight: rgba(110, 168, 254, 0.35);
+      --danger: #ff7b7b;
+      --ok: #73e2a7;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #171b2f 0%, #0f1220 60%);
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
+      min-height: 100vh;
+    }
+
+    .panel {
+      background: rgba(23, 27, 47, 0.95);
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .board-wrap {
+      padding: 20px;
+    }
+
+    .board {
+      width: min(80vw, 760px);
+      aspect-ratio: 1 / 1;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border-radius: 14px;
+      overflow: hidden;
+      margin: 0 auto;
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+
+    .square {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(24px, 4vw, 48px);
+      user-select: none;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+
+    .square.light { background: var(--light-square); }
+    .square.dark { background: var(--dark-square); }
+    .square.selected::after,
+    .square.target::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--highlight);
+    }
+
+    .piece {
+      position: relative;
+      z-index: 1;
+      line-height: 1;
+    }
+
+    .sidebar {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section {
+      background: var(--panel-2);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 26px; margin-bottom: 8px; }
+    h2 { font-size: 16px; margin-bottom: 10px; }
+    h3 { font-size: 14px; margin-bottom: 8px; color: var(--muted); }
+    .muted { color: var(--muted); }
+
+    .controls, .setup-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button, select {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.secondary {
+      background: rgba(255,255,255,0.09);
+      color: var(--text);
+    }
+
+    button.primary-2 {
+      background: var(--accent-2);
+    }
+
+    select {
+      width: 100%;
+      background: #fff;
+      color: #111;
+    }
+
+    .status-line {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .log {
+      max-height: 240px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .log-entry {
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .piece-theme-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .piece-theme-row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(115, 226, 167, 0.14);
+      color: var(--ok);
+    }
+
+    @media (max-width: 960px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .board {
+        width: 100%;
+      }
+
+      .setup-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel board-wrap">
+      <div id="board" class="board"></div>
+    </div>
+
+    <div class="panel sidebar">
+      <div>
+        <h1>Mycatur V2</h1>
+        <p class="muted">Normal chess first. Special piece names are cosmetic only for now.</p>
+      </div>
+
+      <div class="section">
+        <h2>Game Setup</h2>
+        <div class="setup-grid">
+          <div>
+            <h3>Mode</h3>
+            <select id="modeSelect">
+              <option value="human-vs-human">Human vs Human</option>
+              <option value="human-vs-engine">Human vs Engine</option>
+            </select>
+          </div>
+          <div>
+            <h3>Side</h3>
+            <select id="playerColorSelect">
+              <option value="white">Play as White</option>
+              <option value="black">Play as Black</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="piece-theme-grid">
+          <div class="piece-theme-row">
+            <label for="queenThemeSelect">Queen theme</label>
+            <select id="queenThemeSelect"></select>
+          </div>
+          <div class="piece-theme-row">
+            <label for="rookThemeSelect">Rook theme</label>
+            <select id="rookThemeSelect"></select>
+          </div>
+          <div class="piece-theme-row">
+            <label for="bishopThemeSelect">Bishop theme</label>
+            <select id="bishopThemeSelect"></select>
+          </div>
+          <div class="piece-theme-row">
+            <label for="knightThemeSelect">Knight theme</label>
+            <select id="knightThemeSelect"></select>
+          </div>
+          <div class="piece-theme-row">
+            <label for="pawnThemeSelect">Pawn theme</label>
+            <select id="pawnThemeSelect"></select>
+          </div>
+        </div>
+
+        <div class="setup-controls" style="margin-top: 14px;">
+          <button id="startButton" class="primary-2">Start Game</button>
+          <button id="resetButton" class="secondary">Reset Game</button>
+        </div>
+        <p class="muted" style="margin-top: 10px; font-size: 13px;">
+          Theme choices only change labels for now. No special powers are active.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>Status</h2>
+        <div id="status" class="status-line"></div>
+        <div style="margin-top: 10px;">
+          <span class="badge">Normal chess rules active</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Move Log</h2>
+        <div id="moveLog" class="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
