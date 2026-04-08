@@ -241,6 +241,69 @@ export function createGame() {
     });
   }
 
+
+  function pushSandboxHistorySnapshot() {
+    state.sandboxHistory = state.sandboxHistory || [];
+    state.sandboxHistory.push({
+      board: state.board.map(row => row.map(piece => (piece ? { ...piece } : null))),
+      castlingRights: JSON.parse(JSON.stringify(state.castlingRights)),
+      enPassantTarget: state.enPassantTarget ? { ...state.enPassantTarget } : null,
+      currentTurn: state.currentTurn,
+      pendingPromotion: state.pendingPromotion ? { ...state.pendingPromotion } : null,
+    });
+    if (state.sandboxHistory.length > 100) {
+      state.sandboxHistory.shift();
+    }
+  }
+
+  function undoSandboxAction() {
+    if (!state.isSandbox || !state.sandboxHistory?.length) return false;
+    const prev = state.sandboxHistory.pop();
+    if (!prev) return false;
+    state.board = prev.board.map(row => row.map(piece => (piece ? { ...piece } : null)));
+    state.castlingRights = JSON.parse(JSON.stringify(prev.castlingRights));
+    state.enPassantTarget = prev.enPassantTarget ? { ...prev.enPassantTarget } : null;
+    state.currentTurn = prev.currentTurn;
+    state.pendingPromotion = prev.pendingPromotion ? { ...prev.pendingPromotion } : null;
+    state.selectedSquare = null;
+    state.validMoves = [];
+    return true;
+  }
+
+  function sandboxMovePiece(fromRow, fromCol, toRow, toCol) {
+    pushSandboxHistorySnapshot();
+    const piece = state.board[fromRow][fromCol];
+    if (!piece) return false;
+    state.board[toRow][toCol] = piece;
+    state.board[fromRow][fromCol] = null;
+    state.selectedSquare = null;
+    state.validMoves = [];
+    state.pendingPromotion = null;
+    state.enPassantTarget = null;
+    return true;
+  }
+
+  function sandboxDeletePiece(row, col) {
+    if (!state.board[row][col]) return false;
+    pushSandboxHistorySnapshot();
+    state.board[row][col] = null;
+    state.selectedSquare = null;
+    state.validMoves = [];
+    state.pendingPromotion = null;
+    state.enPassantTarget = null;
+    return true;
+  }
+
+  function sandboxSummonPiece(row, col, piece) {
+    pushSandboxHistorySnapshot();
+    state.board[row][col] = piece;
+    state.selectedSquare = null;
+    state.validMoves = [];
+    state.pendingPromotion = null;
+    state.enPassantTarget = null;
+    return true;
+  }
+
   function updateGameStatus() {
     const sideToMove = state.currentTurn;
     const inCheck = isKingInCheck(state.board, sideToMove);
@@ -544,6 +607,7 @@ export function createGame() {
       black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
     };
     applySpecializationsToBoard();
+    state.isSandbox = state.ruleset === 'sandbox';
     state.started = true;
     state.pendingPromotion = null;
     state.pendingPromotionMove = null;
@@ -599,6 +663,7 @@ export function createGame() {
       black: Array.from({ length: 6 }, (_, i) => state.specializedAssignments?.black?.[i] || null),
     };
     applySpecializationsToBoard();
+    state.isSandbox = state.ruleset === 'sandbox';
     state.started = true;
     clearSelection();
     if (Object.keys(state.positionHistory).length === 0) {
@@ -751,3 +816,10 @@ export function createGame() {
 
   return { init };
 }
+
+
+window.mycaturSandboxControls = {
+  undoSandboxAction: () => undoSandboxAction(),
+  sandboxDeletePiece: (row, col) => sandboxDeletePiece(row, col),
+  sandboxSummonPiece: (row, col, piece) => sandboxSummonPiece(row, col, piece),
+};

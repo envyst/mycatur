@@ -64,5 +64,7 @@ export function createInitialState(options = {}) {
     positionHistory: {},
     specializedAssignments: createEmptyAssignments(),
     isSpecialized: false,
+    isSandbox: false,
+    sandboxHistory: [],
   };
 }

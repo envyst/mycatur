@@ -500,3 +500,5 @@ export function getNewSessionValues() {
     specialized: document.getElementById('newSessionSpecializedToggle').checked,
   };
 }
+
+// Sandbox UI wiring placeholder added in this checkpoint.
