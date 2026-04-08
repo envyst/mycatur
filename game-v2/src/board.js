@@ -159,7 +159,8 @@ function collectDirectionalMoves(board, row, col, color, directions, gameState) 
         moves.push({ row: r, col: c });
       } else {
         if (target.color !== color) {
-          if (!(gameState?.mode === 'specialized' && isIronPawnAt(gameState.specializedAssignments, r, c))) {
+          const targetRules = getSpecializedRulesFromPiece(target);
+          if (movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
             moves.push({ row: r, col: c });
           }
         }
@@ -183,8 +184,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
   if (type === PIECE_TYPES.PAWN) {
     const dir = color === COLORS.WHITE ? -1 : 1;
     const startRow = color === COLORS.WHITE ? 6 : 1;
-    const pieceAtSquare = getPiece(gameState.board, row, col);
-  const rules = getSpecializedRulesFromPiece(pieceAtSquare);
+    const rules = getSpecializedRulesFromPiece(piece);
 
     const oneStep = row + dir;
     if (isInsideBoard(oneStep, col) && !getPiece(board, oneStep, col)) {
@@ -323,7 +323,7 @@ export function findKing(board, color) {
   return null;
 }
 
-export function isSquareAttacked(board, targetRow, targetCol, byColor) {
+export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState = {}) {
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let col = 0; col < BOARD_SIZE; col += 1) {
       const piece = board[row][col];
@@ -346,7 +346,11 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor) {
         continue;
       }
 
-      const moves = getPseudoLegalMoves(board, row, col, { castlingRights: null, enPassantTarget: null, specializedAssignments: null, mode: 'human-vs-human' });
+      const moves = getPseudoLegalMoves(board, row, col, {
+        castlingRights: null,
+        enPassantTarget: null,
+        isSpecialized: gameState?.isSpecialized || false,
+      });
       if (moves.some(move => move.row === targetRow && move.col === targetCol)) {
         return true;
       }
@@ -360,7 +364,7 @@ export function isKingInCheck(board, color) {
   const kingPos = findKing(board, color);
   if (!kingPos) return false;
   const opponent = color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
-  return isSquareAttacked(board, kingPos.row, kingPos.col, opponent);
+  return isSquareAttacked(board, kingPos.row, kingPos.col, opponent, { isSpecialized: true });
 }
 
 function isCastlingMove(piece, fromCol, toCol) {
@@ -381,8 +385,8 @@ export function getLegalMoves(board, row, col, gameState) {
       const opponent = piece.color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
 
       if (isKingInCheck(board, piece.color)) return false;
-      if (isSquareAttacked(board, homeRow, stepCol, opponent)) return false;
-      if (isSquareAttacked(board, homeRow, finalCol, opponent)) return false;
+      if (isSquareAttacked(board, homeRow, stepCol, opponent, gameState)) return false;
+      if (isSquareAttacked(board, homeRow, finalCol, opponent, gameState)) return false;
     }
 
     const applied = applyMove(board, row, col, move.row, move.col, gameState);
