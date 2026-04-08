@@ -237,7 +237,9 @@ export function createGame() {
     state.pendingPromotion = null;
     state.enPassantTarget = null;
     state.lastMove = { from: { row: fromRow, col: fromCol }, to: { row: toRow, col: toCol } };
+    state.currentTurn = getOpponentColor(piece.color);
     state.statusMessage = `Sandbox moved ${piece.color} ${piece.type} to ${toChessCoord(toRow, toCol)}.`;
+    updateGameStatus();
     redraw();
     return true;
   }
@@ -598,6 +600,12 @@ export function createGame() {
 
     if (state.isSandbox) {
       const piece = getPiece(state.board, row, col);
+      if (state.selectedSquare && sameSquare(state.selectedSquare, { row, col })) {
+        clearSelection();
+        state.statusMessage = 'Selection cleared.';
+        redraw();
+        return;
+      }
       if (state.selectedSquare && !sameSquare(state.selectedSquare, { row, col })) {
         const selectedPiece = getPiece(state.board, state.selectedSquare.row, state.selectedSquare.col);
         if (selectedPiece) {
