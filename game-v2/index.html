@@ -297,6 +297,14 @@
         padding: 12px;
       }
 
+      .sidebar {
+        gap: 10px;
+      }
+
+      .inline-actions {
+        gap: 6px;
+      }
+
       .board-stage {
         width: min(100%, calc(100vw - 24px));
       }
@@ -377,6 +385,28 @@
     </div>
 
     <div class="panel sidebar">
+      <div id="sandboxSection" class="section" style="display:none;">
+        <h2>Sandbox Controls</h2>
+        <div class="inline-actions" style="margin-bottom:10px;">
+          <button id="sandboxAskAiWhiteButton" class="secondary">Ask AI White</button>
+          <button id="sandboxAskAiBlackButton" class="secondary">Ask AI Black</button>
+        </div>
+        <div id="sandboxStatus" class="item-meta" style="margin-bottom:10px;"></div>
+        <div class="item-meta" style="margin-bottom:10px;">Tap a piece, then tap any square to move it freely.</div>
+        <div class="controls">
+          <select id="sandboxSummonColor">
+            <option value="white">White</option>
+            <option value="black">Black</option>
+          </select>
+          <select id="sandboxSummonType"></select>
+          <div class="inline-actions">
+            <button id="sandboxSummonButton">Summon to selected square</button>
+            <button id="sandboxDeleteButton" class="danger">Delete selected piece</button>
+            <button id="sandboxUndoButton" class="secondary">Undo</button>
+          </div>
+        </div>
+      </div>
+
       <div class="section">
         <h2>Game Controls</h2>
         <div class="controls">
@@ -398,31 +428,9 @@
         </div>
       </div>
 
-      
       <div class="section">
         <h2>Specialized Setup</h2>
         <div id="specializedSetup" class="controls"></div>
-      </div>
-
-      <div id="sandboxSection" class="section" style="display:none;">
-        <h2>Sandbox Controls</h2>
-        <div id="sandboxStatus" class="item-meta" style="margin-bottom:10px;"></div>
-        <div class="controls">
-          <select id="sandboxSummonColor">
-            <option value="white">White</option>
-            <option value="black">Black</option>
-          </select>
-          <select id="sandboxSummonType"></select>
-          <div class="inline-actions">
-            <button id="sandboxSummonButton">Summon to selected square</button>
-            <button id="sandboxDeleteButton" class="danger">Delete selected piece</button>
-            <button id="sandboxUndoButton" class="secondary">Undo</button>
-          </div>
-          <div class="inline-actions">
-            <button id="sandboxAskAiWhiteButton" class="secondary">Ask AI White</button>
-            <button id="sandboxAskAiBlackButton" class="secondary">Ask AI Black</button>
-          </div>
-        </div>
       </div>
 
       <div class="section">
