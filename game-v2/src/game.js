@@ -315,26 +315,39 @@ export function createGame() {
     const adjacentIds = collectAdjacentEnemyIdsForIcicles(state.board);
     const next = { ...(state.specializedStatusById || {}) };
 
-    // reset or clear pieces no longer adjacent
     Object.keys(next).forEach(id => {
       if (!adjacentIds.has(id)) {
         if (next[id]?.frozen) {
-          next[id] = { ...next[id], adjacencyCount: 0 };
+          next[id] = { ...next[id], pendingFreeze: false };
         } else {
           delete next[id];
         }
       }
     });
 
-    // accumulate adjacency progress and freeze on the second continuous turn snapshot
     adjacentIds.forEach(id => {
-      const prev = next[id] || { adjacencyCount: 0, frozen: false };
-      const nextCount = Math.min((prev.adjacencyCount || 0) + 1, 2);
-      next[id] = {
-        ...prev,
-        adjacencyCount: nextCount,
-        frozen: prev.frozen || nextCount >= 2,
-      };
+      const prev = next[id] || { frozen: false, pendingFreeze: false, pendingFromTurn: null };
+      if (prev.frozen) {
+        next[id] = prev;
+        return;
+      }
+      if (!prev.pendingFreeze) {
+        next[id] = {
+          ...prev,
+          pendingFreeze: true,
+          pendingFromTurn: state.currentTurn,
+        };
+        return;
+      }
+      if (prev.pendingFromTurn !== state.currentTurn) {
+        next[id] = {
+          ...prev,
+          frozen: true,
+          pendingFreeze: false,
+        };
+        return;
+      }
+      next[id] = prev;
     });
 
     state.specializedStatusById = next;
@@ -346,7 +359,7 @@ export function createGame() {
     if (!status?.frozen) return false;
     state.specializedStatusById = {
       ...(state.specializedStatusById || {}),
-      [piece.id]: { adjacencyCount: 0, frozen: false },
+      [piece.id]: { pendingFreeze: false, pendingFromTurn: null, frozen: false },
     };
     state.currentTurn = getOpponentColor(piece.color);
     state.statusMessage = `${piece.color} ${piece.type} spent a turn to unfreeze.`;
