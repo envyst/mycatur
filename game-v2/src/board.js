@@ -245,8 +245,9 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         moves.push({ row: r, col: c });
       } else if (target.color !== color) {
         const targetRules = getSpecializedRulesFromPiece(target);
+        const movingRules = getSpecializedRulesFromPiece(piece);
         const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
-        if (!captureSuppressed && targetRules.canBeCaptured !== false) {
+        if (movingRules.canCapture !== false && !captureSuppressed && targetRules.canBeCaptured !== false) {
           moves.push({ row: r, col: c });
         }
       }
@@ -286,8 +287,9 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         moves.push({ row: r, col: c });
       } else if (target.color !== color) {
         const targetRules = getSpecializedRulesFromPiece(target);
+        const movingRules = getSpecializedRulesFromPiece(piece);
         const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
-        if (!captureSuppressed && targetRules.canBeCaptured !== false) {
+        if (movingRules.canCapture !== false && !captureSuppressed && targetRules.canBeCaptured !== false) {
           moves.push({ row: r, col: c });
         }
       }
@@ -333,8 +335,11 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
     for (let col = 0; col < BOARD_SIZE; col += 1) {
       const piece = board[row][col];
       if (!piece || piece.color !== byColor) continue;
+      const pieceRules = getSpecializedRulesFromPiece(piece);
+      const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
 
       if (piece.type === PIECE_TYPES.PAWN) {
+        if (pieceRules.canCapture === false || captureSuppressed) continue;
         const dir = byColor === COLORS.WHITE ? -1 : 1;
         for (const dc of [-1, 1]) {
           if (row + dir === targetRow && col + dc === targetCol) {
@@ -345,6 +350,7 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
       }
 
       if (piece.type === PIECE_TYPES.KING) {
+        if (pieceRules.canCapture === false || captureSuppressed) continue;
         if (Math.abs(row - targetRow) <= 1 && Math.abs(col - targetCol) <= 1) {
           return true;
         }
