@@ -370,8 +370,8 @@ export function createGame() {
 
   function normalizeAssignmentSlots(assignments) {
     return {
-      white: Array.from({ length: 6 }, (_, i) => assignments.white?.[i] || null),
-      black: Array.from({ length: 6 }, (_, i) => assignments.black?.[i] || null),
+      white: (assignments.white && assignments.white.length ? assignments.white : [null]).map(item => item || null),
+      black: (assignments.black && assignments.black.length ? assignments.black : [null]).map(item => item || null),
     };
   }
 
@@ -445,7 +445,7 @@ export function createGame() {
     renderPromotionControls(state, handlePromotion);
     renderAuth(state.user);
     renderSessions(state.sessions, loadSession, handleDeleteSession, handleRenameSession);
-    renderSpecializedSetup(state, handleSpecializedAssignment);
+    renderSpecializedSetup(state, handleSpecializedAssignment, handleSpecializedSetupSideChange, handleAddSpecializedAssignmentRow);
     renderSandboxControls(state, {
       onSandboxSummon: handleSandboxSummon,
       onSandboxDelete: handleSandboxDelete,
@@ -830,7 +830,7 @@ export function createGame() {
       aiThinking: false,
       isSpecialized: state.isSpecialized,
       isSandbox: state.isSandbox,
-      specializedAssignments: { white: Array(6).fill(null), black: Array(6).fill(null) },
+      specializedAssignments: { white: [null], black: [null] },
       sandboxHistory: [],
     };
     redraw();
@@ -849,6 +849,19 @@ export function createGame() {
     updateGameStatus();
     redraw();
     maybeDoEngineMove();
+  }
+
+
+  function handleSpecializedSetupSideChange(side) {
+    state.specializedSetupSide = side;
+    redraw();
+  }
+
+  function handleAddSpecializedAssignmentRow(side) {
+    const next = normalizeAssignmentSlots(state.specializedAssignments || createEmptyAssignments());
+    next[side] = [...next[side], null];
+    state.specializedAssignments = next;
+    redraw();
   }
 
   function handleSpecializedAssignment(side, index, assignment) {

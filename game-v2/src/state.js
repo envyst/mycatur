@@ -67,5 +67,6 @@ export function createInitialState(options = {}) {
     isSandbox: false,
     sandboxHistory: [],
     specializedStatusById: {},
+    specializedSetupSide: 'white',
   };
 }

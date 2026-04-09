@@ -65,8 +65,8 @@ export const SPECIALIZED_STARTING_SQUARES = {
 
 export function createEmptyAssignments() {
   return {
-    white: Array(6).fill(null),
-    black: Array(6).fill(null),
+    white: [null],
+    black: [null],
   };
 }
 

@@ -199,7 +199,7 @@ export function renderStatus(state) {
   statusEl.textContent = `Mode: ${modeLabel}${rulesetBit} | Current turn: ${state.currentTurn}${extra}${sessionBit}${readOnlyBit}`;
 }
 
-export function renderSpecializedSetup(state, onAssign) {
+export function renderSpecializedSetup(state, onAssign, onSetupSideChange, onAddAssignmentRow) {
   const wrap = document.getElementById('specializedSetup');
   wrap.innerHTML = '';
 
@@ -208,116 +208,144 @@ export function renderSpecializedSetup(state, onAssign) {
     return;
   }
 
+  const topTabs = document.createElement('div');
+  topTabs.className = 'inline-actions';
   ['white', 'black'].forEach(side => {
-    const section = document.createElement('div');
-    section.className = 'item';
-    const title = document.createElement('div');
-    title.className = 'item-title';
-    const count = (state.specializedAssignments?.[side] || []).filter(Boolean).length;
-    title.textContent = `${side.toUpperCase()} assignments (${count}/6)`;
-    section.appendChild(title);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = side === state.specializedSetupSide ? '' : 'secondary';
+    btn.textContent = side[0].toUpperCase() + side.slice(1);
+    btn.addEventListener('click', () => onSetupSideChange(side));
+    topTabs.appendChild(btn);
+  });
+  wrap.appendChild(topTabs);
 
-    for (let i = 0; i < 6; i += 1) {
-      const current = state.specializedAssignments?.[side]?.[i] || null;
-      const row = document.createElement('div');
-      row.className = 'inline-controls';
-      row.style.marginTop = '8px';
-      row.style.alignItems = 'center';
+  const side = state.specializedSetupSide || 'white';
+  const section = document.createElement('div');
+  section.className = 'item';
+  section.style.marginTop = '10px';
 
-      const specWrap = document.createElement('div');
-      specWrap.style.flex = '1';
-      specWrap.style.display = 'flex';
-      specWrap.style.flexDirection = 'column';
-      specWrap.style.gap = '6px';
+  const title = document.createElement('div');
+  title.className = 'item-title';
+  const count = (state.specializedAssignments?.[side] || []).filter(Boolean).length;
+  title.textContent = `${side.toUpperCase()} assignments (${count})`;
+  section.appendChild(title);
 
-      const specSearch = document.createElement('input');
-      specSearch.type = 'text';
-      specSearch.placeholder = 'Search specialized piece';
-      specSearch.value = current?.specialization || '';
+  const rows = state.specializedAssignments?.[side] || [null];
+  rows.forEach((current, i) => {
+    const row = document.createElement('div');
+    row.className = 'inline-controls';
+    row.style.marginTop = '8px';
+    row.style.alignItems = 'center';
 
-      const specSelect = document.createElement('select');
-      specSelect.style.flex = '1';
+    const searchWrap = document.createElement('div');
+    searchWrap.style.position = 'relative';
+    searchWrap.style.flex = '1';
 
-      function rebuildSpecializedOptions() {
-        const query = (specSearch.value || '').trim().toLowerCase();
-        specSelect.innerHTML = '';
-        const specEmpty = document.createElement('option');
-        specEmpty.value = '';
-        specEmpty.textContent = 'Specialized piece';
-        specSelect.appendChild(specEmpty);
-        Object.entries(SPECIALIZED_CATALOG).forEach(([pieceType, names]) => {
-          names.forEach(name => {
-            if (query && !name.toLowerCase().includes(query)) return;
-            const opt = document.createElement('option');
-            opt.value = `${pieceType}::${name}`;
-            opt.textContent = name;
-            if (current && current.pieceType === pieceType && current.specialization === name) {
-              opt.selected = true;
-            }
-            specSelect.appendChild(opt);
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Specialized piece';
+    searchInput.value = current?.specialization || '';
+
+    const dropdown = document.createElement('div');
+    dropdown.style.position = 'absolute';
+    dropdown.style.top = '100%';
+    dropdown.style.left = '0';
+    dropdown.style.right = '0';
+    dropdown.style.background = '#fff';
+    dropdown.style.color = '#111';
+    dropdown.style.borderRadius = '10px';
+    dropdown.style.marginTop = '4px';
+    dropdown.style.maxHeight = '180px';
+    dropdown.style.overflow = 'auto';
+    dropdown.style.zIndex = '20';
+    dropdown.style.display = 'none';
+    dropdown.style.boxShadow = '0 10px 24px rgba(0,0,0,0.28)';
+
+    function renderSearchOptions() {
+      const query = (searchInput.value || '').trim().toLowerCase();
+      dropdown.innerHTML = '';
+      let count = 0;
+      Object.entries(SPECIALIZED_CATALOG).forEach(([pieceType, names]) => {
+        names.forEach(name => {
+          if (query && !name.toLowerCase().includes(query)) return;
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'secondary';
+          item.style.width = '100%';
+          item.style.textAlign = 'left';
+          item.style.borderRadius = '0';
+          item.style.background = 'transparent';
+          item.style.color = '#111';
+          item.textContent = name;
+          item.addEventListener('click', () => {
+            searchInput.value = name;
+            dropdown.style.display = 'none';
+            onAssign(side, i, { pieceType, specialization: name, square: current?.square || '' });
           });
+          dropdown.appendChild(item);
+          count += 1;
         });
-      }
-
-      rebuildSpecializedOptions();
-
-      const arrow = document.createElement('div');
-      arrow.className = 'item-meta';
-      arrow.textContent = '→';
-      arrow.style.padding = '0 4px';
-
-      const pieceSelect = document.createElement('select');
-      pieceSelect.style.flex = '1';
-      const pieceEmpty = document.createElement('option');
-      pieceEmpty.value = '';
-      pieceEmpty.textContent = 'Assigned piece';
-      pieceSelect.appendChild(pieceEmpty);
-
-      const selectedValue = specSelect.value;
-      const selectedType = selectedValue ? selectedValue.split('::')[0] : current?.pieceType || null;
-      if (selectedType) {
-        (SPECIALIZED_STARTING_SQUARES[side][selectedType] || []).forEach(square => {
-          const opt = document.createElement('option');
-          opt.value = square;
-          opt.textContent = friendlySquareLabel(side, selectedType, square);
-          if (current?.square === square) {
-            opt.selected = true;
-          }
-          pieceSelect.appendChild(opt);
-        });
-      }
-
-      specSearch.addEventListener('input', () => {
-        rebuildSpecializedOptions();
       });
-
-      specSelect.addEventListener('change', () => {
-        const value = specSelect.value;
-        if (!value) {
-          onAssign(side, i, null);
-          return;
-        }
-        const [pieceType, specialization] = value.split('::');
-        onAssign(side, i, { pieceType, specialization, square: '' });
-      });
-
-      pieceSelect.addEventListener('change', () => {
-        const value = specSelect.value;
-        if (!value) return;
-        const [pieceType, specialization] = value.split('::');
-        onAssign(side, i, { pieceType, specialization, square: pieceSelect.value });
-      });
-
-      specWrap.appendChild(specSearch);
-      specWrap.appendChild(specSelect);
-      row.appendChild(specWrap);
-      row.appendChild(arrow);
-      row.appendChild(pieceSelect);
-      section.appendChild(row);
+      dropdown.style.display = count ? 'block' : 'none';
     }
 
-    wrap.appendChild(section);
+    searchInput.addEventListener('focus', renderSearchOptions);
+    searchInput.addEventListener('input', renderSearchOptions);
+    searchInput.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 120));
+
+    searchWrap.appendChild(searchInput);
+    searchWrap.appendChild(dropdown);
+
+    const arrow = document.createElement('div');
+    arrow.className = 'item-meta';
+    arrow.textContent = '→';
+    arrow.style.padding = '0 4px';
+
+    const pieceSelect = document.createElement('select');
+    pieceSelect.style.flex = '1';
+    const pieceEmpty = document.createElement('option');
+    pieceEmpty.value = '';
+    pieceEmpty.textContent = 'Assigned piece';
+    pieceSelect.appendChild(pieceEmpty);
+
+    const selectedType = current?.pieceType || null;
+    if (selectedType) {
+      (SPECIALIZED_STARTING_SQUARES[side][selectedType] || []).forEach(square => {
+        const opt = document.createElement('option');
+        opt.value = square;
+        opt.textContent = friendlySquareLabel(side, selectedType, square);
+        if (current?.square === square) {
+          opt.selected = true;
+        }
+        pieceSelect.appendChild(opt);
+      });
+    }
+
+    pieceSelect.addEventListener('change', () => {
+      if (!current?.pieceType || !current?.specialization) return;
+      onAssign(side, i, {
+        pieceType: current.pieceType,
+        specialization: current.specialization,
+        square: pieceSelect.value,
+      });
+    });
+
+    row.appendChild(searchWrap);
+    row.appendChild(arrow);
+    row.appendChild(pieceSelect);
+    section.appendChild(row);
   });
+
+  const addButton = document.createElement('button');
+  addButton.type = 'button';
+  addButton.className = 'secondary';
+  addButton.style.marginTop = '10px';
+  addButton.textContent = '+ Add row';
+  addButton.addEventListener('click', () => onAddAssignmentRow(side));
+  section.appendChild(addButton);
+
+  wrap.appendChild(section);
 }
 
 export function renderSandboxControls(state, handlers) {
