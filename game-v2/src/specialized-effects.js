@@ -1,5 +1,5 @@
 export const SPECIALIZED_EFFECTS = {
-  'Anti violence': {
+  'Anti Violence': {
     baseType: 'knight',
     rules: {
       canCapture: false,
