@@ -1,4 +1,10 @@
 export const SPECIALIZED_EFFECTS = {
+  'Aristocat': {
+    baseType: 'bishop',
+    rules: {
+      blocksAllPromotion: true,
+    },
+  },
   'Anti Violence': {
     baseType: 'knight',
     rules: {
@@ -87,6 +93,19 @@ export function pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col) {
       if (!other || other.color !== enemyColor) continue;
       const rules = getSpecializedRulesFromPiece(other);
       if (rules.suppressesAdjacentEnemyCaptures) return true;
+    }
+  }
+  return false;
+}
+
+
+export function boardHasGlobalPromotionBlocker(board) {
+  for (let row = 0; row < (board?.length || 0); row += 1) {
+    for (let col = 0; col < (board?.[row]?.length || 0); col += 1) {
+      const piece = board[row][col];
+      if (!piece) continue;
+      const rules = getSpecializedRulesFromPiece(piece);
+      if (rules.blocksAllPromotion) return true;
     }
   }
   return false;

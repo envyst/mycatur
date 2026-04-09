@@ -1,6 +1,6 @@
 import { BOARD_SIZE, COLORS } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
-import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk, pieceHasCaptureSuppressionFromAdjacentEnemy } from './specialized-effects.js';
+import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk, pieceHasCaptureSuppressionFromAdjacentEnemy, boardHasGlobalPromotionBlocker } from './specialized-effects.js';
 
 export function isInsideBoard(row, col) {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
@@ -24,6 +24,9 @@ export function getPiece(board, row, col) {
 
 function isPromotionSquare(piece, row, gameState, col) {
   const rules = getSpecializedRulesFromPiece(piece);
+  if (boardHasGlobalPromotionBlocker(gameState?.board || gameState?.boardState || gameState?.nextBoard || [])) {
+    return false;
+  }
   if (piece.type === PIECE_TYPES.PAWN && rules.canPromote === false) {
     return false;
   }
