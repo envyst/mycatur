@@ -562,7 +562,6 @@ export function createGame() {
     state.lastMove = { from, to };
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
-    updateIcicleFreezeState();
     if (applied.promotion) {
       state.pendingPromotion = applied.promotion;
       state.pendingPromotionMove = {
