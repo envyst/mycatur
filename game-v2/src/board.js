@@ -1,6 +1,6 @@
 import { BOARD_SIZE, COLORS } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
-import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk } from './specialized-effects.js';
+import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk, pieceHasCaptureSuppressionFromAdjacentEnemy } from './specialized-effects.js';
 
 export function isInsideBoard(row, col) {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
@@ -160,7 +160,8 @@ function collectDirectionalMoves(board, row, col, color, directions, gameState) 
       } else {
         if (target.color !== color) {
           const targetRules = getSpecializedRulesFromPiece(target);
-          if (movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
+          const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+          if (!captureSuppressed && movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
             moves.push({ row: r, col: c });
           }
         }
@@ -196,7 +197,9 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       }
     }
 
-    if (rules.canCapture !== false) {
+    const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+
+    if (rules.canCapture !== false && !captureSuppressed) {
       for (const dc of [-1, 1]) {
         const targetRow = row + dir;
         const targetCol = col + dc;
@@ -242,7 +245,8 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         moves.push({ row: r, col: c });
       } else if (target.color !== color) {
         const targetRules = getSpecializedRulesFromPiece(target);
-        if (targetRules.canBeCaptured !== false) {
+        const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+        if (!captureSuppressed && targetRules.canBeCaptured !== false) {
           moves.push({ row: r, col: c });
         }
       }
@@ -282,7 +286,8 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         moves.push({ row: r, col: c });
       } else if (target.color !== color) {
         const targetRules = getSpecializedRulesFromPiece(target);
-        if (targetRules.canBeCaptured !== false) {
+        const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+        if (!captureSuppressed && targetRules.canBeCaptured !== false) {
           moves.push({ row: r, col: c });
         }
       }

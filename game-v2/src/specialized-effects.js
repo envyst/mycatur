@@ -1,4 +1,11 @@
 export const SPECIALIZED_EFFECTS = {
+  'Anti violence': {
+    baseType: 'knight',
+    rules: {
+      canCapture: false,
+      suppressesAdjacentEnemyCaptures: true,
+    },
+  },
   'Iron Pawn': {
     baseType: 'pawn',
     rules: {
@@ -63,6 +70,23 @@ export function pieceHasParalysisFromBasilisk(board, gameState, row, col) {
         cc += stepC;
       }
       if (!blocked) return true;
+    }
+  }
+  return false;
+}
+
+
+export function pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col) {
+  const piece = board?.[row]?.[col];
+  if (!piece) return false;
+  const enemyColor = piece.color === 'white' ? 'black' : 'white';
+  for (let r = Math.max(0, row - 1); r <= Math.min(7, row + 1); r += 1) {
+    for (let c = Math.max(0, col - 1); c <= Math.min(7, col + 1); c += 1) {
+      if (r === row && c === col) continue;
+      const other = board?.[r]?.[c];
+      if (!other || other.color !== enemyColor) continue;
+      const rules = getSpecializedRulesFromPiece(other);
+      if (rules.suppressesAdjacentEnemyCaptures) return true;
     }
   }
   return false;
