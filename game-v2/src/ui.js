@@ -224,23 +224,42 @@ export function renderSpecializedSetup(state, onAssign) {
       row.style.marginTop = '8px';
       row.style.alignItems = 'center';
 
+      const specWrap = document.createElement('div');
+      specWrap.style.flex = '1';
+      specWrap.style.display = 'flex';
+      specWrap.style.flexDirection = 'column';
+      specWrap.style.gap = '6px';
+
+      const specSearch = document.createElement('input');
+      specSearch.type = 'text';
+      specSearch.placeholder = 'Search specialized piece';
+      specSearch.value = current?.specialization || '';
+
       const specSelect = document.createElement('select');
       specSelect.style.flex = '1';
-      const specEmpty = document.createElement('option');
-      specEmpty.value = '';
-      specEmpty.textContent = 'Specialized piece';
-      specSelect.appendChild(specEmpty);
-      Object.entries(SPECIALIZED_CATALOG).forEach(([pieceType, names]) => {
-        names.forEach(name => {
-          const opt = document.createElement('option');
-          opt.value = `${pieceType}::${name}`;
-          opt.textContent = name;
-          if (current && current.pieceType === pieceType && current.specialization === name) {
-            opt.selected = true;
-          }
-          specSelect.appendChild(opt);
+
+      function rebuildSpecializedOptions() {
+        const query = (specSearch.value || '').trim().toLowerCase();
+        specSelect.innerHTML = '';
+        const specEmpty = document.createElement('option');
+        specEmpty.value = '';
+        specEmpty.textContent = 'Specialized piece';
+        specSelect.appendChild(specEmpty);
+        Object.entries(SPECIALIZED_CATALOG).forEach(([pieceType, names]) => {
+          names.forEach(name => {
+            if (query && !name.toLowerCase().includes(query)) return;
+            const opt = document.createElement('option');
+            opt.value = `${pieceType}::${name}`;
+            opt.textContent = name;
+            if (current && current.pieceType === pieceType && current.specialization === name) {
+              opt.selected = true;
+            }
+            specSelect.appendChild(opt);
+          });
         });
-      });
+      }
+
+      rebuildSpecializedOptions();
 
       const arrow = document.createElement('div');
       arrow.className = 'item-meta';
@@ -268,6 +287,10 @@ export function renderSpecializedSetup(state, onAssign) {
         });
       }
 
+      specSearch.addEventListener('input', () => {
+        rebuildSpecializedOptions();
+      });
+
       specSelect.addEventListener('change', () => {
         const value = specSelect.value;
         if (!value) {
@@ -285,7 +308,9 @@ export function renderSpecializedSetup(state, onAssign) {
         onAssign(side, i, { pieceType, specialization, square: pieceSelect.value });
       });
 
-      row.appendChild(specSelect);
+      specWrap.appendChild(specSearch);
+      specWrap.appendChild(specSelect);
+      row.appendChild(specWrap);
       row.appendChild(arrow);
       row.appendChild(pieceSelect);
       section.appendChild(row);
