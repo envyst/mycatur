@@ -503,6 +503,20 @@ export function createGame() {
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
     if (applied.promotion) {
       state.pendingPromotion = applied.promotion;
+      state.pendingPromotionMove = {
+        from,
+        to,
+        applied,
+        capturedPiece,
+        boardBefore,
+        gameStateBefore: {
+          board: boardBefore,
+          currentTurn: piece.color,
+          castlingRights: structuredClone ? structuredClone(state.castlingRights) : JSON.parse(JSON.stringify(state.castlingRights)),
+          enPassantTarget: state.enPassantTarget ? { ...state.enPassantTarget } : null,
+          positionHistory: { ...state.positionHistory },
+        },
+      };
       clearSelection();
       redraw();
       return;
