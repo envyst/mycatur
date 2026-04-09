@@ -342,7 +342,13 @@ export function renderSpecializedSetup(state, onAssign, onSetupSideChange, onAdd
   addButton.className = 'secondary';
   addButton.style.marginTop = '10px';
   addButton.textContent = '+ Add row';
-  addButton.addEventListener('click', () => onAddAssignmentRow(side));
+  const canAddMore = rows.length < 16;
+  addButton.disabled = !canAddMore;
+  if (canAddMore) {
+    addButton.addEventListener('click', () => onAddAssignmentRow(side));
+  } else {
+    addButton.textContent = 'Max 16 rows';
+  }
   section.appendChild(addButton);
 
   wrap.appendChild(section);

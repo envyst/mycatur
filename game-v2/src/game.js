@@ -859,6 +859,10 @@ export function createGame() {
 
   function handleAddSpecializedAssignmentRow(side) {
     const next = normalizeAssignmentSlots(state.specializedAssignments || createEmptyAssignments());
+    if (next[side].length >= 16) {
+      redraw();
+      return;
+    }
     next[side] = [...next[side], null];
     state.specializedAssignments = next;
     redraw();
