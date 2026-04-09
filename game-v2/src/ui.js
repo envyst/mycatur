@@ -99,7 +99,8 @@ export function renderBoard(state, onSquareClick) {
         const span = document.createElement('span');
         span.className = `piece ${piece.color === 'white' ? 'white-piece' : 'black-piece'}`;
         span.textContent = getPieceSymbol(piece);
-        span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}` : getPieceLabel(piece);
+        const frozenFlag = state?.specializedStatusById?.[piece.id]?.frozen ? ' — Frozen' : '';
+        span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}` : `${getPieceLabel(piece)}${frozenFlag}`;
         square.appendChild(span);
 
         const customMarker = piece?.customMarker ? abbreviateSandboxMarker(piece.customMarker) : '';

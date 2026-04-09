@@ -312,11 +312,10 @@ export function createGame() {
 
   function updateIcicleFreezeState() {
     if (!state.isSpecialized) return;
-    const { collectAdjacentEnemyIdsForIcicles } = window.__mycaturSpecializedHelpers || {};
-    if (!collectAdjacentEnemyIdsForIcicles) return;
     const adjacentIds = collectAdjacentEnemyIdsForIcicles(state.board);
     const next = { ...(state.specializedStatusById || {}) };
 
+    // reset or clear pieces no longer adjacent
     Object.keys(next).forEach(id => {
       if (!adjacentIds.has(id)) {
         if (next[id]?.frozen) {
@@ -327,13 +326,14 @@ export function createGame() {
       }
     });
 
+    // accumulate adjacency progress and freeze on the second continuous turn snapshot
     adjacentIds.forEach(id => {
       const prev = next[id] || { adjacencyCount: 0, frozen: false };
-      const count = (prev.adjacencyCount || 0) + 1;
+      const nextCount = Math.min((prev.adjacencyCount || 0) + 1, 2);
       next[id] = {
         ...prev,
-        adjacencyCount: count,
-        frozen: prev.frozen || count >= 2,
+        adjacencyCount: nextCount,
+        frozen: prev.frozen || nextCount >= 2,
       };
     });
 
@@ -350,6 +350,7 @@ export function createGame() {
     };
     state.currentTurn = getOpponentColor(piece.color);
     state.statusMessage = `${piece.color} ${piece.type} spent a turn to unfreeze.`;
+    updateGameStatus();
     redraw();
     return true;
   }
@@ -548,6 +549,7 @@ export function createGame() {
     state.lastMove = { from, to };
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
+    updateIcicleFreezeState();
     if (applied.promotion) {
       state.pendingPromotion = applied.promotion;
       state.pendingPromotionMove = {
