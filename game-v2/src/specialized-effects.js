@@ -28,6 +28,12 @@ export const SPECIALIZED_EFFECTS = {
       paralyzesAttackedPieces: true,
     },
   },
+  'Cardinal': {
+    baseType: 'bishop',
+    rules: {
+      canStepDirectlyBackward: true,
+    },
+  },
   'Icicle': {
     baseType: 'bishop',
     rules: {

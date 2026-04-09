@@ -260,7 +260,15 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
   }
 
   if (type === PIECE_TYPES.BISHOP) {
-    return collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
+    const moves = collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
+    const rules = getSpecializedRulesFromPiece(piece);
+    if (rules.canStepDirectlyBackward) {
+      const backwardRow = color === COLORS.WHITE ? row + 1 : row - 1;
+      if (isInsideBoard(backwardRow, col) && !getPiece(board, backwardRow, col)) {
+        moves.push({ row: backwardRow, col });
+      }
+    }
+    return moves;
   }
 
   if (type === PIECE_TYPES.ROOK) {
