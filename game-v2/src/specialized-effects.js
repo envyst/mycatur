@@ -41,6 +41,13 @@ export const SPECIALIZED_EFFECTS = {
       freezesAdjacentEnemies: true,
     },
   },
+  'Phase Rook': {
+    baseType: 'rook',
+    rules: {
+      canPassThroughAllies: true,
+      cannotCaptureThroughAllies: true,
+    },
+  },
 };
 
 export function getSpecializedDefinitionFromPiece(piece) {

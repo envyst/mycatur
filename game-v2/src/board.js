@@ -155,18 +155,24 @@ function collectDirectionalMoves(board, row, col, color, directions, gameState) 
   for (const [dr, dc] of directions) {
     let r = row + dr;
     let c = col + dc;
+    let passedThroughAlly = false;
 
     while (isInsideBoard(r, c)) {
       const target = board[r][c];
       if (!target) {
         moves.push({ row: r, col: c });
+      } else if (target.color === color) {
+        if (movingRules.canPassThroughAllies) {
+          passedThroughAlly = true;
+        } else {
+          break;
+        }
       } else {
-        if (target.color !== color) {
-          const targetRules = getSpecializedRulesFromPiece(target);
-          const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
-          if (!captureSuppressed && movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
-            moves.push({ row: r, col: c });
-          }
+        const targetRules = getSpecializedRulesFromPiece(target);
+        const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+        const captureBlockedByPassedAlly = movingRules.cannotCaptureThroughAllies && passedThroughAlly;
+        if (!captureSuppressed && !captureBlockedByPassedAlly && movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
+          moves.push({ row: r, col: c });
         }
         break;
       }
