@@ -389,6 +389,7 @@ export function getLegalMoves(board, row, col, gameState) {
   const piece = getPiece(board, row, col);
   if (!piece) return [];
   if (gameState?.isSpecialized && pieceHasParalysisFromBasilisk(board, gameState, row, col)) return [];
+  if (gameState?.isSpecialized && piece?.id && gameState?.specializedStatusById?.[piece.id]?.frozen) return [];
 
   const pseudoMoves = getPseudoLegalMoves(board, row, col, gameState);
   return pseudoMoves.filter(move => {

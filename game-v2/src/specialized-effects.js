@@ -28,6 +28,13 @@ export const SPECIALIZED_EFFECTS = {
       paralyzesAttackedPieces: true,
     },
   },
+  'Icicle': {
+    baseType: 'bishop',
+    rules: {
+      canCapture: false,
+      freezesAdjacentEnemies: true,
+    },
+  },
 };
 
 export function getSpecializedDefinitionFromPiece(piece) {
@@ -109,4 +116,26 @@ export function boardHasGlobalPromotionBlocker(board) {
     }
   }
   return false;
+}
+
+
+export function collectAdjacentEnemyIdsForIcicles(board) {
+  const adjacentEnemyIds = new Set();
+  for (let row = 0; row < (board?.length || 0); row += 1) {
+    for (let col = 0; col < (board?.[row]?.length || 0); col += 1) {
+      const piece = board[row][col];
+      if (!piece) continue;
+      const rules = getSpecializedRulesFromPiece(piece);
+      if (!rules.freezesAdjacentEnemies) continue;
+      for (let r = Math.max(0, row - 1); r <= Math.min(7, row + 1); r += 1) {
+        for (let c = Math.max(0, col - 1); c <= Math.min(7, col + 1); c += 1) {
+          if (r === row && c === col) continue;
+          const other = board?.[r]?.[c];
+          if (!other || other.color === piece.color || !other.id) continue;
+          adjacentEnemyIds.add(other.id);
+        }
+      }
+    }
+  }
+  return adjacentEnemyIds;
 }

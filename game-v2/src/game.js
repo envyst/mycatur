@@ -21,6 +21,7 @@ import {
 import { api } from './api.js';
 import { createEngine } from './engine.js';
 import { createEmptyAssignments } from './specialized.js';
+import { collectAdjacentEnemyIdsForIcicles } from './specialized-effects.js';
 
 function sameSquare(a, b) {
   return a && b && a.row === b.row && a.col === b.col;
@@ -308,6 +309,51 @@ export function createGame() {
     return true;
   }
 
+
+  function updateIcicleFreezeState() {
+    if (!state.isSpecialized) return;
+    const { collectAdjacentEnemyIdsForIcicles } = window.__mycaturSpecializedHelpers || {};
+    if (!collectAdjacentEnemyIdsForIcicles) return;
+    const adjacentIds = collectAdjacentEnemyIdsForIcicles(state.board);
+    const next = { ...(state.specializedStatusById || {}) };
+
+    Object.keys(next).forEach(id => {
+      if (!adjacentIds.has(id)) {
+        if (next[id]?.frozen) {
+          next[id] = { ...next[id], adjacencyCount: 0 };
+        } else {
+          delete next[id];
+        }
+      }
+    });
+
+    adjacentIds.forEach(id => {
+      const prev = next[id] || { adjacencyCount: 0, frozen: false };
+      const count = (prev.adjacencyCount || 0) + 1;
+      next[id] = {
+        ...prev,
+        adjacencyCount: count,
+        frozen: prev.frozen || count >= 2,
+      };
+    });
+
+    state.specializedStatusById = next;
+  }
+
+  function spendTurnToUnfreeze(piece) {
+    if (!piece?.id) return false;
+    const status = state.specializedStatusById?.[piece.id];
+    if (!status?.frozen) return false;
+    state.specializedStatusById = {
+      ...(state.specializedStatusById || {}),
+      [piece.id]: { adjacencyCount: 0, frozen: false },
+    };
+    state.currentTurn = getOpponentColor(piece.color);
+    state.statusMessage = `${piece.color} ${piece.type} spent a turn to unfreeze.`;
+    redraw();
+    return true;
+  }
+
   function normalizeAssignmentSlots(assignments) {
     return {
       white: Array.from({ length: 6 }, (_, i) => assignments.white?.[i] || null),
@@ -437,6 +483,7 @@ export function createGame() {
     state.currentTurn = getOpponentColor(state.currentTurn);
     incrementPositionHistory(state);
     clearSelection();
+    updateIcicleFreezeState();
     updateGameStatus();
     await persistState(move);
   }
@@ -677,6 +724,10 @@ export function createGame() {
     if (state.mode === 'human-vs-ai' && state.currentTurn !== state.playerColor) return;
 
     const piece = getPiece(state.board, row, col);
+    if (piece && state.isSpecialized && piece.color === state.currentTurn && state.specializedStatusById?.[piece.id]?.frozen) {
+      spendTurnToUnfreeze(piece);
+      return;
+    }
     if (state.selectedSquare) {
       const isTarget = state.validMoves.some(move => move.row === row && move.col === col);
       if (isTarget) {
@@ -776,6 +827,7 @@ export function createGame() {
     state.started = true;
     state.statusMessage = '';
     applySpecializationsToBoard();
+    updateIcicleFreezeState();
     clearSelection();
     if (!state.isSandbox && Object.keys(state.positionHistory).length === 0) {
       incrementPositionHistory(state);

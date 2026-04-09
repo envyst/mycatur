@@ -66,5 +66,6 @@ export function createInitialState(options = {}) {
     isSpecialized: false,
     isSandbox: false,
     sandboxHistory: [],
+    specializedStatusById: {},
   };
 }
