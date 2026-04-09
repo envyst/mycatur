@@ -446,10 +446,46 @@ export function createGame() {
     const { row, col } = state.pendingPromotion;
     const piece = state.board[row][col];
     if (!piece || piece.type !== PIECE_TYPES.PAWN) return;
+
+    const from = state.pendingPromotionMove.from;
+    const to = state.pendingPromotionMove.to;
+    const moveIndex = state.moveHistory.length - 1;
+    const applied = state.pendingPromotionMove.applied;
+    const capturedPiece = state.pendingPromotionMove.capturedPiece;
+    const boardBefore = state.pendingPromotionMove.boardBefore;
+    const gameStateBefore = state.pendingPromotionMove.gameStateBefore;
+
     state.board[row][col] = { ...piece, type: pieceType };
+    const nextTurn = getOpponentColor(piece.color);
+    const san = buildSan(
+      { ...piece, type: PIECE_TYPES.PAWN },
+      from,
+      to,
+      applied,
+      capturedPiece,
+      pieceType,
+      boardBefore,
+      gameStateBefore,
+      state.board,
+      nextTurn,
+    );
+
+    state.moveHistory[moveIndex] = san;
+    state.moveLog[moveIndex] = formatMoveEntry(moveIndex, san);
+
     state.pendingPromotion = null;
     state.pendingPromotionMove = null;
+    await finalizeTurn({
+      moveIndex: moveIndex + 1,
+      side: piece.color,
+      fromSquare: toChessCoord(from.row, from.col),
+      toSquare: toChessCoord(to.row, to.col),
+      piece: 'pawn',
+      promotionPiece: pieceType,
+      san,
+    });
     redraw();
+    maybeDoEngineMove();
   }
 
   async function makeMove(from, to) {
@@ -489,8 +525,7 @@ export function createGame() {
       state.aiThinking = true;
       state.statusMessage = 'Sandbox AI is thinking...';
       redraw();
-      const aiState = { ...state, currentTurn: requestedSide };
-      const best = await state.engine.getBestMove(aiState, { depth: 12 });
+      const best = await state.engine.getBestMove(state, { depth: 12 });
       state.aiThinking = false;
       if (!best) {
         state.statusMessage = 'Sandbox AI could not find a move.';
