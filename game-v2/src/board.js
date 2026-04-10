@@ -238,12 +238,20 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
   }
 
   if (type === PIECE_TYPES.KNIGHT) {
-    const jumps = [
-      [-2, -1], [-2, 1],
-      [-1, -2], [-1, 2],
-      [1, -2], [1, 2],
-      [2, -1], [2, 1],
-    ];
+    const movingRules = getSpecializedRulesFromPiece(piece);
+    const jumps = movingRules.leapPattern === 'camel'
+      ? [
+          [-3, -1], [-3, 1],
+          [-1, -3], [-1, 3],
+          [1, -3], [1, 3],
+          [3, -1], [3, 1],
+        ]
+      : [
+          [-2, -1], [-2, 1],
+          [-1, -2], [-1, 2],
+          [1, -2], [1, 2],
+          [2, -1], [2, 1],
+        ];
 
     for (const [dr, dc] of jumps) {
       const r = row + dr;
@@ -254,7 +262,6 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         moves.push({ row: r, col: c });
       } else if (target.color !== color) {
         const targetRules = getSpecializedRulesFromPiece(target);
-        const movingRules = getSpecializedRulesFromPiece(piece);
         const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
         if (movingRules.canCapture !== false && !captureSuppressed && targetRules.canBeCaptured !== false) {
           moves.push({ row: r, col: c });

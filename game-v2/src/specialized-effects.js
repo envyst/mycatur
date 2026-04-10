@@ -34,6 +34,12 @@ export const SPECIALIZED_EFFECTS = {
       canStepDirectlyBackward: true,
     },
   },
+  'Camel': {
+    baseType: 'knight',
+    rules: {
+      leapPattern: 'camel',
+    },
+  },
   'Icicle': {
     baseType: 'bishop',
     rules: {
