@@ -40,6 +40,12 @@ export const SPECIALIZED_EFFECTS = {
       leapPattern: 'camel',
     },
   },
+  'Pawn with Knife': {
+    baseType: 'pawn',
+    rules: {
+      extendedCenterDiagonalCapture: true,
+    },
+  },
   'Icicle': {
     baseType: 'bishop',
     rules: {
