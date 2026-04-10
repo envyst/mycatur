@@ -379,7 +379,7 @@ export function createGame() {
   function updateGameStatus() {
     if (state.isSandbox) {
       const sideToMove = state.currentTurn;
-      const inCheck = isKingInCheck(state.board, sideToMove);
+      const inCheck = isKingInCheck(state.board, sideToMove, state);
       const hasMove = hasAnyLegalMove(state.board, sideToMove, state);
       const currentPositionKey = createPositionKey(state.board, state.currentTurn, state.castlingRights, state.enPassantTarget);
       state.checkColor = inCheck ? sideToMove : null;
@@ -408,7 +408,7 @@ export function createGame() {
       return;
     }
     const sideToMove = state.currentTurn;
-    const inCheck = isKingInCheck(state.board, sideToMove);
+    const inCheck = isKingInCheck(state.board, sideToMove, state);
     const hasMove = hasAnyLegalMove(state.board, sideToMove, state);
     const currentPositionKey = createPositionKey(state.board, state.currentTurn, state.castlingRights, state.enPassantTarget);
     state.checkColor = inCheck ? sideToMove : null;
@@ -463,7 +463,11 @@ export function createGame() {
   function jumpToReplayIndex(index) {
     if (!state.replayStates.length) return;
     state.replayIndex = Math.max(0, Math.min(index, state.replayStates.length - 1));
-    state.replayBoard = state.replayIndex === state.replayStates.length - 1 ? null : state.replayStates[state.replayIndex].board;
+    const snapshot = state.replayStates[state.replayIndex];
+    state.replayBoard = state.replayIndex === state.replayStates.length - 1 ? null : snapshot.board;
+    if (snapshot?.currentTurn) {
+      state.currentTurn = snapshot.currentTurn;
+    }
     redraw();
   }
 
@@ -795,7 +799,15 @@ export function createGame() {
     state.winner = null;
     state.isDraw = false;
     state.statusMessage = sessionRow.result ? `Stored result: ${sessionRow.result}` : '';
-    state.replayStates = [{ board: sessionRow.board_state_json }, ...moves.map(move => ({ board: move.board_state_after_json || sessionRow.board_state_json }))];
+    state.replayStates = [
+      { board: sessionRow.board_state_json, currentTurn: sessionRow.current_turn, result: sessionRow.result, status: sessionRow.status },
+      ...moves.map((move, idx) => ({
+        board: move.board_state_after_json || sessionRow.board_state_json,
+        currentTurn: idx % 2 === 0 ? 'black' : 'white',
+        result: null,
+        status: 'active',
+      })),
+    ];
     state.replayIndex = state.replayStates.length - 1;
     state.replayBoard = null;
     clearSelection();
@@ -955,10 +967,10 @@ export function createGame() {
       onLogin: () => handleLogin(),
       onLogout: () => handleLogout(),
       onCreateSession: () => handleCreateSession(),
-      onReplayStart: () => { if (state.replayStates.length) { state.replayIndex = 0; state.replayBoard = state.replayStates[0].board; redraw(); } },
-      onReplayPrev: () => { if (state.replayStates.length) { state.replayIndex = Math.max(0, state.replayIndex - 1); state.replayBoard = state.replayStates[state.replayIndex].board; redraw(); } },
-      onReplayNext: () => { if (state.replayStates.length) { state.replayIndex = Math.min(state.replayStates.length - 1, state.replayIndex + 1); state.replayBoard = state.replayStates[state.replayIndex].board; redraw(); } },
-      onReplayEnd: () => { if (state.replayStates.length) { state.replayIndex = state.replayStates.length - 1; state.replayBoard = null; redraw(); } },
+      onReplayStart: () => { if (state.replayStates.length) { jumpToReplayIndex(0); } },
+      onReplayPrev: () => { if (state.replayStates.length) { jumpToReplayIndex(Math.max(0, state.replayIndex - 1)); } },
+      onReplayNext: () => { if (state.replayStates.length) { jumpToReplayIndex(Math.min(state.replayStates.length - 1, state.replayIndex + 1)); } },
+      onReplayEnd: () => { if (state.replayStates.length) { jumpToReplayIndex(state.replayStates.length - 1); state.replayBoard = null; redraw(); } },
       onRulesetChange: ruleset => {
         updateRulesetState(ruleset);
         redraw();
