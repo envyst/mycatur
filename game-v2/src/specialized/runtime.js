@@ -98,3 +98,15 @@ export function collectAdjacentEnemyIdsForIcicles(board) {
   }
   return adjacentEnemyIds;
 }
+
+
+export function buildDerivedSpecializedState(board, baseState = {}) {
+  const derived = {
+    ...(baseState || {}),
+    board,
+    isSpecialized: Boolean(baseState?.isSpecialized),
+    specializedStatusById: { ...(baseState?.specializedStatusById || {}) },
+    lastMovedPieceIdByColor: baseState?.lastMovedPieceIdByColor || { white: null, black: null },
+  };
+  return derived;
+}

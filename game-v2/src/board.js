@@ -1,6 +1,6 @@
 import { BOARD_SIZE, COLORS } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
-import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk, pieceHasCaptureSuppressionFromAdjacentEnemy, boardHasGlobalPromotionBlocker } from './specialized/effects.js';
+import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk, pieceHasCaptureSuppressionFromAdjacentEnemy, boardHasGlobalPromotionBlocker, buildDerivedSpecializedState } from './specialized/effects.js';
 
 export function isInsideBoard(row, col) {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
@@ -469,13 +469,14 @@ export function getLegalMoves(board, row, col, gameState) {
       const finalCol = move.col;
       const opponent = piece.color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
 
-      if (isKingInCheck(board, piece.color)) return false;
+      if (isKingInCheck(board, piece.color, buildDerivedSpecializedState(board, gameState))) return false;
       if (isSquareAttacked(board, homeRow, stepCol, opponent, gameState)) return false;
       if (isSquareAttacked(board, homeRow, finalCol, opponent, gameState)) return false;
     }
 
     const applied = applyMove(board, row, col, move.row, move.col, gameState);
-    return !isKingInCheck(applied.board, piece.color);
+    const derivedState = buildDerivedSpecializedState(applied.board, gameState);
+    return !isKingInCheck(applied.board, piece.color, derivedState);
   });
 }
 
