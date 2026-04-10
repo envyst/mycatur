@@ -1,9 +1,2 @@
-export {
-  SPECIALIZED_EFFECTS,
-  getSpecializedDefinitionFromPiece,
-  getSpecializedRulesFromPiece,
-  pieceHasParalysisFromBasilisk,
-  pieceHasCaptureSuppressionFromAdjacentEnemy,
-  boardHasGlobalPromotionBlocker,
-  collectAdjacentEnemyIdsForIcicles,
-} from '../specialized-effects.js';
+export * from './definitions.js';
+export * from './runtime.js';
