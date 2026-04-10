@@ -221,6 +221,23 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         }
       }
 
+      if (rules.extendedCenterDiagonalCapture) {
+        const towardCenterDc = col <= 3 ? 1 : -1;
+        const midRow = row + dir;
+        const midCol = col + towardCenterDc;
+        const targetRow = row + (2 * dir);
+        const targetCol = col + (2 * towardCenterDc);
+        if (isInsideBoard(midRow, midCol) && isInsideBoard(targetRow, targetCol) && !getPiece(board, midRow, midCol)) {
+          const target = getPiece(board, targetRow, targetCol);
+          if (target && target.color !== color) {
+            const targetRules = getSpecializedRulesFromPiece(target);
+            if (targetRules.canBeCaptured !== false) {
+              moves.push({ row: targetRow, col: targetCol });
+            }
+          }
+        }
+      }
+
       if (rules.canEnPassantCapture !== false && gameState.enPassantTarget) {
         const ep = gameState.enPassantTarget;
         if (ep.row === row + dir && Math.abs(ep.col - col) === 1) {
