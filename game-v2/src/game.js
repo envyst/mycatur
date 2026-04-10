@@ -541,6 +541,9 @@ export function createGame() {
 
     state.pendingPromotion = null;
     state.pendingPromotionMove = null;
+    state.replayStates = [...(state.replayStates || []), { board: cloneBoardState(state.board), currentTurn: nextTurn, result: null, status: 'active' }];
+    state.replayIndex = state.replayStates.length - 1;
+    state.replayBoard = null;
     await finalizeTurn({
       moveIndex: moveIndex + 1,
       side: piece.color,
@@ -588,6 +591,9 @@ export function createGame() {
       redraw();
       return;
     }
+    state.replayStates = [...(state.replayStates || []), { board: cloneBoardState(state.board), currentTurn: nextTurn, result: null, status: 'active' }];
+    state.replayIndex = state.replayStates.length - 1;
+    state.replayBoard = null;
     await finalizeTurn();
   }
 
@@ -861,6 +867,9 @@ export function createGame() {
     if (!state.isSandbox && Object.keys(state.positionHistory).length === 0) {
       incrementPositionHistory(state);
     }
+    state.replayStates = [{ board: cloneBoardState(state.board), currentTurn: state.currentTurn, result: state.result || null, status: state.winner || state.isDraw ? 'finished' : 'active' }];
+    state.replayIndex = 0;
+    state.replayBoard = null;
     updateGameStatus();
     redraw();
     maybeDoEngineMove();
