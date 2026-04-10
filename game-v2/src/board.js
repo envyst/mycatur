@@ -407,9 +407,9 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
       if (!piece || piece.color !== byColor) continue;
       const pieceRules = getSpecializedRulesFromPiece(piece);
       const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+      if (gameState?.isSpecialized && pieceHasParalysisFromBasilisk(board, gameState, row, col)) continue;
 
       if (piece.type === PIECE_TYPES.PAWN) {
-        if (pieceHasParalysisFromBasilisk(board, gameState, row, col)) continue;
         if (pieceRules.canCapture === false || captureSuppressed) continue;
         const dir = byColor === COLORS.WHITE ? -1 : 1;
         for (const dc of [-1, 1]) {
@@ -421,7 +421,6 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
       }
 
       if (piece.type === PIECE_TYPES.KING) {
-        if (pieceHasParalysisFromBasilisk(board, gameState, row, col)) continue;
         if (pieceRules.canCapture === false || captureSuppressed) continue;
         if (Math.abs(row - targetRow) <= 1 && Math.abs(col - targetCol) <= 1) {
           return true;
@@ -433,6 +432,8 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
         castlingRights: null,
         enPassantTarget: null,
         isSpecialized: gameState?.isSpecialized || false,
+        specializedStatusById: gameState?.specializedStatusById || {},
+        lastMovedPieceIdByColor: gameState?.lastMovedPieceIdByColor || { white: null, black: null },
       });
       if (moves.some(move => move.row === targetRow && move.col === targetCol)) {
         return true;
@@ -443,11 +444,11 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
   return false;
 }
 
-export function isKingInCheck(board, color) {
+export function isKingInCheck(board, color, gameState = {}) {
   const kingPos = findKing(board, color);
   if (!kingPos) return false;
   const opponent = color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
-  return isSquareAttacked(board, kingPos.row, kingPos.col, opponent, { isSpecialized: true });
+  return isSquareAttacked(board, kingPos.row, kingPos.col, opponent, gameState);
 }
 
 function isCastlingMove(piece, fromCol, toCol) {
