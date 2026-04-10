@@ -1,5 +1,5 @@
 import { getPieceLabel, getPieceSymbol, PIECE_TYPES } from './pieces.js';
-import { SPECIALIZED_CATALOG, SPECIALIZED_STARTING_SQUARES, specializationMarkerLabel, friendlySquareLabel } from './specialized.js';
+import { SPECIALIZED_CATALOG, SPECIALIZED_STARTING_SQUARES, specializationMarkerLabel, friendlySquareLabel } from './specialized/index.js';
 
 function getDisplayRows(playerColor) {
   return playerColor === 'white'

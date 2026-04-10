@@ -1,6 +1,6 @@
 import { COLORS, GAME_MODES } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
-import { createEmptyAssignments } from './specialized.js';
+import { createEmptyAssignments } from './specialized/index.js';
 
 function makePiece(color, type, square) {
   const prefix = color === COLORS.WHITE ? 'w' : 'b';

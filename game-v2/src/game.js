@@ -20,8 +20,8 @@ import {
 } from './ui.js';
 import { api } from './api.js';
 import { createEngine } from './engine.js';
-import { createEmptyAssignments } from './specialized.js';
-import { collectAdjacentEnemyIdsForIcicles } from './specialized-effects.js';
+import { createEmptyAssignments } from './specialized/index.js';
+import { collectAdjacentEnemyIdsForIcicles } from './specialized/effects.js';
 
 function sameSquare(a, b) {
   return a && b && a.row === b.row && a.col === b.col;
