@@ -238,7 +238,7 @@ export function createGame() {
     state.pendingPromotion = null;
     state.enPassantTarget = null;
     state.lastMove = { from: { row: fromRow, col: fromCol }, to: { row: toRow, col: toCol } };
-    state.lastMovedPieceId = piece.id || null;
+    state.lastMovedPieceIdByColor = { ...(state.lastMovedPieceIdByColor || { white: null, black: null }), [piece.color]: piece.id || null };
     state.currentTurn = getOpponentColor(piece.color);
     state.statusMessage = `Sandbox moved ${piece.color} ${piece.type} to ${toChessCoord(toRow, toCol)}.`;
     updateGameStatus();
@@ -561,7 +561,7 @@ export function createGame() {
     const nextTurn = getOpponentColor(piece.color);
     const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, state, state.board, nextTurn);
     state.lastMove = { from, to };
-    state.lastMovedPieceId = piece.id || null;
+    state.lastMovedPieceIdByColor = { ...(state.lastMovedPieceIdByColor || { white: null, black: null }), [piece.color]: piece.id || null };
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
     if (applied.promotion) {
@@ -617,7 +617,7 @@ export function createGame() {
       state.enPassantTarget = applied.enPassantTarget;
       state.pendingPromotion = null;
       state.lastMove = { from: best.from, to: best.to };
-      state.lastMovedPieceId = piece?.id || null;
+      state.lastMovedPieceIdByColor = { ...(state.lastMovedPieceIdByColor || { white: null, black: null }), [requestedSide]: piece?.id || null };
       state.currentTurn = getOpponentColor(requestedSide);
       state.statusMessage = `Sandbox AI (${requestedSide}) moved ${piece?.type || 'piece'} to ${toChessCoord(best.to.row, best.to.col)}.`;
       redraw();

@@ -68,6 +68,6 @@ export function createInitialState(options = {}) {
     sandboxHistory: [],
     specializedStatusById: {},
     specializedSetupSide: 'white',
-    lastMovedPieceId: null,
+    lastMovedPieceIdByColor: { white: null, black: null },
   };
 }

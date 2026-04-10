@@ -286,7 +286,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       }
     }
 
-    if (movingRules.gainsOneStepAfterMovingLastTurn && gameState?.lastMovedPieceId === piece.id) {
+    if (movingRules.gainsOneStepAfterMovingLastTurn && gameState?.lastMovedPieceIdByColor?.[piece.color] === piece.id) {
       const oneSteps = [
         [-1, -1], [-1, 0], [-1, 1],
         [0, -1],           [0, 1],
