@@ -99,7 +99,15 @@ export function renderBoard(state, onSquareClick) {
         const span = document.createElement('span');
         span.className = `piece ${piece.color === 'white' ? 'white-piece' : 'black-piece'}`;
         span.textContent = getPieceSymbol(piece);
-        const frozenFlag = state?.specializedStatusById?.[piece.id]?.frozen ? ' — Frozen' : '';
+        const isFrozen = Boolean(state?.specializedStatusById?.[piece.id]?.frozen);
+        const frozenFlag = isFrozen ? ' — Frozen' : '';
+        if (isFrozen) {
+          span.style.color = piece.color === 'white' ? '#8fd3ff' : '#2e6dff';
+          span.style.textShadow = piece.color === 'white'
+            ? '0 0 8px rgba(143, 211, 255, 0.85), 0 0 2px rgba(255,255,255,0.9)'
+            : '0 0 8px rgba(46, 109, 255, 0.85), 0 0 2px rgba(10,20,60,0.95)';
+          span.style.filter = 'drop-shadow(0 0 2px rgba(120,200,255,0.65))';
+        }
         span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}` : `${getPieceLabel(piece)}${frozenFlag}`;
         square.appendChild(span);
 

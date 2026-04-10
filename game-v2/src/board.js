@@ -409,6 +409,7 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
       const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
 
       if (piece.type === PIECE_TYPES.PAWN) {
+        if (pieceHasParalysisFromBasilisk(board, gameState, row, col)) continue;
         if (pieceRules.canCapture === false || captureSuppressed) continue;
         const dir = byColor === COLORS.WHITE ? -1 : 1;
         for (const dc of [-1, 1]) {
@@ -420,6 +421,7 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
       }
 
       if (piece.type === PIECE_TYPES.KING) {
+        if (pieceHasParalysisFromBasilisk(board, gameState, row, col)) continue;
         if (pieceRules.canCapture === false || captureSuppressed) continue;
         if (Math.abs(row - targetRow) <= 1 && Math.abs(col - targetCol) <= 1) {
           return true;
