@@ -1,6 +1,6 @@
 import { BOARD_SIZE, COLORS } from './config.js';
 import { PIECE_TYPES } from './pieces.js';
-import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk, pieceHasCaptureSuppressionFromAdjacentEnemy, boardHasGlobalPromotionBlocker } from './specialized-effects.js';
+import { getSpecializedRulesFromPiece, pieceHasParalysisFromBasilisk, pieceHasCaptureSuppressionFromAdjacentEnemy, boardHasGlobalPromotionBlocker } from './specialized/effects.js';
 
 export function isInsideBoard(row, col) {
   return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
