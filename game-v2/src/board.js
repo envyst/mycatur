@@ -133,6 +133,18 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
     };
   }
 
+  const movedPieceRules = getSpecializedRulesFromPiece(piece);
+  if (!promotion && movedPieceRules.promoteImmediatelyOnCheck && piece.type === PIECE_TYPES.PAWN && !boardHasGlobalPromotionBlocker(nextBoard)) {
+    const nextTurn = piece.color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
+    if (isKingInCheck(nextBoard, nextTurn, { ...gameState, board: nextBoard, currentTurn: nextTurn })) {
+      promotion = {
+        row: toRow,
+        col: toCol,
+        color: piece.color,
+      };
+    }
+  }
+
   resetsHalfmoveClock = piece.type === PIECE_TYPES.PAWN || isCapture;
 
   return {

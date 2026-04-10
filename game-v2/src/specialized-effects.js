@@ -52,6 +52,12 @@ export const SPECIALIZED_EFFECTS = {
       extendedCenterDiagonalCapture: true,
     },
   },
+  'Hero Pawn': {
+    baseType: 'pawn',
+    rules: {
+      promoteImmediatelyOnCheck: true,
+    },
+  },
   'Icicle': {
     baseType: 'bishop',
     rules: {
