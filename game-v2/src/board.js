@@ -286,6 +286,23 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       }
     }
 
+    if (movingRules.gainsOneStepAfterMovingLastTurn && gameState?.lastMovedPieceId === piece.id) {
+      const oneSteps = [
+        [-1, -1], [-1, 0], [-1, 1],
+        [0, -1],           [0, 1],
+        [1, -1],  [1, 0],  [1, 1],
+      ];
+      for (const [dr, dc] of oneSteps) {
+        const r = row + dr;
+        const c = col + dc;
+        if (!isInsideBoard(r, c)) continue;
+        const target = getPiece(board, r, c);
+        if (!target) {
+          moves.push({ row: r, col: c });
+        }
+      }
+    }
+
     return moves;
   }
 

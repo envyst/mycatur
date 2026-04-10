@@ -40,6 +40,12 @@ export const SPECIALIZED_EFFECTS = {
       leapPattern: 'camel',
     },
   },
+  'Fish': {
+    baseType: 'knight',
+    rules: {
+      gainsOneStepAfterMovingLastTurn: true,
+    },
+  },
   'Pawn with Knife': {
     baseType: 'pawn',
     rules: {
