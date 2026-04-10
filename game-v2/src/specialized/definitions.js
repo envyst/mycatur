@@ -19,6 +19,12 @@ export const SPECIALIZED_EFFECTS = {
       paralyzesAttackedPieces: true,
     },
   },
+  'Blueprint': {
+    baseType: 'pawn',
+    rules: {
+      transformsFromLeftNeighborAtStart: true,
+    },
+  },
   'Cardinal': {
     baseType: 'bishop',
     rules: {

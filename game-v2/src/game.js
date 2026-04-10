@@ -311,6 +311,24 @@ export function createGame() {
   }
 
 
+
+  function resolveBlueprintTransformations() {
+    if (!state.isSpecialized) return;
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        const piece = state.board[row][col];
+        if (!piece || piece.specialization !== 'Blueprint') continue;
+        const leftPiece = col > 0 ? state.board[row][col - 1] : null;
+        const copiedSpecialization = leftPiece?.specialization || null;
+        if (copiedSpecialization) {
+          state.board[row][col] = { ...piece, specialization: copiedSpecialization };
+        } else {
+          state.board[row][col] = { ...piece, specialization: null };
+        }
+      }
+    }
+  }
+
   function updateIcicleFreezeState() {
     if (!state.isSpecialized) return;
     const adjacentIds = collectAdjacentEnemyIdsForIcicles(state.board);
@@ -862,6 +880,7 @@ export function createGame() {
     state.started = true;
     state.statusMessage = '';
     applySpecializationsToBoard();
+    resolveBlueprintTransformations();
     updateIcicleFreezeState();
     clearSelection();
     if (!state.isSandbox && Object.keys(state.positionHistory).length === 0) {
