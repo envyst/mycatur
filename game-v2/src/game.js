@@ -462,6 +462,7 @@ export function createGame() {
     state.currentTurn = getOpponentColor(piece.color);
     state.statusMessage = `Gunslinger destroyed ${targetPos.piece.color} ${targetPos.piece.type}.`;
     state.gunslingerStateById = { ...(state.gunslingerStateById || {}), [piece.id]: { targetId: null, armed: false, pending: false } };
+    clearSelection();
     updateGameStatus();
     redraw();
     return true;
