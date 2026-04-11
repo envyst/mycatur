@@ -456,6 +456,71 @@ export function createGame() {
     return true;
   }
 
+
+  function getNonCapturingBishopMoves(board, row, col) {
+    const moves = [];
+    const dirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+    for (const [dr, dc] of dirs) {
+      let r = row + dr;
+      let c = col + dc;
+      while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+        const target = board[r][c];
+        if (target) break;
+        moves.push({ row: r, col: c });
+        r += dr;
+        c += dc;
+      }
+    }
+    return moves;
+  }
+
+  function computeDancerSpecialDestinations(row, col) {
+    const piece = getPiece(state.board, row, col);
+    if (!piece || piece.specialization !== 'Dancer') return [];
+    const destinations = new Map();
+
+    // one-step non-capturing bishop move
+    for (const move of getNonCapturingBishopMoves(state.board, row, col)) {
+      destinations.set(`${move.row}:${move.col}`, move);
+    }
+
+    // two-step non-capturing bishop move
+    for (const first of getNonCapturingBishopMoves(state.board, row, col)) {
+      const boardAfterFirst = cloneBoardState(state.board);
+      boardAfterFirst[first.row][first.col] = boardAfterFirst[row][col];
+      boardAfterFirst[row][col] = null;
+      for (const second of getNonCapturingBishopMoves(boardAfterFirst, first.row, first.col)) {
+        destinations.set(`${second.row}:${second.col}`, second);
+      }
+    }
+
+    return [...destinations.values()];
+  }
+
+  function enterDancerSpecialMode(piece) {
+    if (!piece?.id) return false;
+    const dancerState = state.dancerStateById?.[piece.id];
+    if (!dancerState?.armed) return false;
+    const pos = findPieceById(piece.id);
+    if (!pos) return false;
+    state.activeDancerSpecialPieceId = piece.id;
+    state.selectedSquare = { row: pos.row, col: pos.col };
+    state.validMoves = computeDancerSpecialDestinations(pos.row, pos.col);
+    state.statusMessage = `${piece.color} Dancer special mode active. Choose a final destination (up to 2 non-capturing bishop moves).`;
+    redraw();
+    return true;
+  }
+
+  function findPieceById(id) {
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        const piece = state.board[row][col];
+        if (piece?.id === id) return { row, col, piece };
+      }
+    }
+    return null;
+  }
+
   function normalizeAssignmentSlots(assignments) {
     return {
       white: (assignments.white && assignments.white.length ? assignments.white : [null]).map(item => item || null),
@@ -587,6 +652,7 @@ export function createGame() {
 
   async function finalizeTurn(move = null) {
     state.currentTurn = getOpponentColor(state.currentTurn);
+    state.activeDancerSpecialPieceId = null;
     incrementPositionHistory(state);
     clearSelection();
     updateIcicleFreezeState();
@@ -664,6 +730,12 @@ export function createGame() {
     const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, state, state.board, nextTurn);
     state.lastMove = { from, to };
     state.lastMovedPieceIdByColor = { ...(state.lastMovedPieceIdByColor || { white: null, black: null }), [piece.color]: piece.id || null };
+    if (piece.specialization === 'Dancer') {
+      const enemyColor = getOpponentColor(piece.color);
+      if (isKingInCheck(state.board, enemyColor, state)) {
+        state.dancerStateById = { ...(state.dancerStateById || {}), [piece.id]: { armed: true } };
+      }
+    }
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
     if (applied.promotion) {
@@ -864,6 +936,20 @@ export function createGame() {
     if (state.selectedSquare) {
       const isTarget = state.validMoves.some(move => move.row === row && move.col === col);
       if (isTarget) {
+        const selectedPiece = getPiece(state.board, state.selectedSquare.row, state.selectedSquare.col);
+        if (state.activeDancerSpecialPieceId && selectedPiece?.id === state.activeDancerSpecialPieceId) {
+          state.board[row][col] = selectedPiece;
+          state.board[state.selectedSquare.row][state.selectedSquare.col] = null;
+          state.lastMove = { from: state.selectedSquare, to: { row, col } };
+          state.statusMessage = `${selectedPiece.color} Dancer used special movement.`;
+          state.dancerStateById = { ...(state.dancerStateById || {}), [selectedPiece.id]: { armed: false } };
+          clearSelection();
+          state.activeDancerSpecialPieceId = null;
+          await finalizeTurn();
+          redraw();
+          maybeDoEngineMove();
+          return;
+        }
         await makeMove(state.selectedSquare, { row, col });
         redraw();
         maybeDoEngineMove();
@@ -873,6 +959,16 @@ export function createGame() {
         if (piece?.specialization === 'Gunslinger' && tryTriggerGunslingerAction(piece, row, col)) {
           return;
         }
+        if (piece?.specialization === 'Dancer' && state.dancerStateById?.[piece.id]?.armed) {
+          if (state.activeDancerSpecialPieceId === piece.id) {
+            state.activeDancerSpecialPieceId = null;
+            clearSelection();
+            redraw();
+            return;
+          }
+          enterDancerSpecialMode(piece);
+          return;
+        }
         clearSelection();
         redraw();
         return;
@@ -880,6 +976,9 @@ export function createGame() {
     }
 
     if (piece && piece.color === state.currentTurn) {
+      if (state.activeDancerSpecialPieceId && piece.id !== state.activeDancerSpecialPieceId) {
+        state.activeDancerSpecialPieceId = null;
+      }
       setSelection(row, col);
     } else {
       clearSelection();

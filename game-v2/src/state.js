@@ -71,5 +71,7 @@ export function createInitialState(options = {}) {
     lastMovedPieceIdByColor: { white: null, black: null },
     specializedCaptureCountsById: {},
     gunslingerStateById: {},
+    dancerStateById: {},
+    activeDancerSpecialPieceId: null,
   };
 }

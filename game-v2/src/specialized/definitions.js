@@ -37,6 +37,12 @@ export const SPECIALIZED_EFFECTS = {
       canStepDirectlyBackward: true,
     },
   },
+  'Dancer': {
+    baseType: 'bishop',
+    rules: {
+      gainsSpecialTwoStepAfterChecking: true,
+    },
+  },
   'Epee Pawn': {
     baseType: 'pawn',
     rules: {
