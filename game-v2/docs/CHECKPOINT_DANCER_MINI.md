@@ -1,16 +1,19 @@
-# Mini Checkpoint: Dancer
+# Mini Checkpoint: Dancer (Stable)
 
 ## Confirmed working state
-Current Dancer behavior is in a good mini-checkpoint state:
+Dancer is now in a stable working state with the following confirmed behavior:
 
 - Dancer behaves as a normal bishop for ordinary movement and check/checkmate relevance
 - if Dancer checks the enemy king, it becomes eligible for the special movement mode on its next same-color turn
 - first tap shows normal bishop moves
 - second tap enters special mode
 - original Dancer square is not a legal special destination
-- third tap/click on the Dancer cancels special mode
-- clicking another allied piece also cancels special mode
+- tapping the same Dancer again while already in special mode cancels it
+- clicking another allied piece cancels the visible special mode
 - special mode shows final destinations reachable in up to 2 non-capturing bishop moves
+- moving another allied piece expires the earned special opportunity
+- moving the same Dancer normally also expires the earned special opportunity
+- using the special move consumes the opportunity properly
 
-## Remaining follow-up
-- ensure moving another allied piece expires Dancer's earned special opportunity completely
+## Purpose
+This is the Dancer-specific rollback reference point after the heavier debugging/tap-flow work.
