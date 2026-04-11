@@ -583,6 +583,13 @@ export function createGame() {
     state.board = applied.board;
     state.castlingRights = applied.castlingRights;
     state.enPassantTarget = applied.enPassantTarget;
+    const movedRules = piece?.specialization ? { specialization: piece.specialization } : null;
+    if (piece?.id && piece.specialization === 'Marauder' && applied.isCapture) {
+      state.specializedCaptureCountsById = {
+        ...(state.specializedCaptureCountsById || {}),
+        [piece.id]: (state.specializedCaptureCountsById?.[piece.id] || 0) + 1,
+      };
+    }
     const nextTurn = getOpponentColor(piece.color);
     const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, state, state.board, nextTurn);
     state.lastMove = { from, to };

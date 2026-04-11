@@ -69,5 +69,6 @@ export function createInitialState(options = {}) {
     specializedStatusById: {},
     specializedSetupSide: 'white',
     lastMovedPieceIdByColor: { white: null, black: null },
+    specializedCaptureCountsById: {},
   };
 }

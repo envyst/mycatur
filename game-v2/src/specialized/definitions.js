@@ -68,6 +68,12 @@ export const SPECIALIZED_EFFECTS = {
       freezesAdjacentEnemies: true,
     },
   },
+  'Marauder': {
+    baseType: 'bishop',
+    rules: {
+      dynamicMarauderRange: true,
+    },
+  },
   'Iron Pawn': {
     baseType: 'pawn',
     rules: {

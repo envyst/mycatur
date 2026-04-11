@@ -159,6 +159,42 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
 }
 
 
+
+function collectMarauderMoves(board, row, col, color, gameState) {
+  const piece = getPiece(board, row, col);
+  const captureCount = gameState?.specializedCaptureCountsById?.[piece?.id] || 0;
+  const maxSteps = 1 + (captureCount * 2);
+  const moves = [];
+  const dirs = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],           [0, 1],
+    [1, -1],  [1, 0],  [1, 1],
+  ];
+
+  for (const [dr, dc] of dirs) {
+    for (let step = 1; step <= maxSteps; step += 1) {
+      const r = row + (dr * step);
+      const c = col + (dc * step);
+      if (!isInsideBoard(r, c)) break;
+      const target = getPiece(board, r, c);
+      if (!target) {
+        moves.push({ row: r, col: c });
+        continue;
+      }
+      if (target.color !== color) {
+        const targetRules = getSpecializedRulesFromPiece(target);
+        const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+        if (!captureSuppressed && targetRules.canBeCaptured !== false) {
+          moves.push({ row: r, col: c });
+        }
+      }
+      break;
+    }
+  }
+
+  return moves;
+}
+
 function collectBouncerMoves(board, row, col, color, gameState) {
   const moves = [];
   const movingPiece = getPiece(board, row, col);
@@ -375,9 +411,11 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
 
   if (type === PIECE_TYPES.BISHOP) {
     const rules = getSpecializedRulesFromPiece(piece);
-    const moves = rules.canBounceOnceOffEdge
-      ? collectBouncerMoves(board, row, col, color, gameState)
-      : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
+    const moves = rules.dynamicMarauderRange
+      ? collectMarauderMoves(board, row, col, color, gameState)
+      : rules.canBounceOnceOffEdge
+        ? collectBouncerMoves(board, row, col, color, gameState)
+        : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
     if (rules.canStepDirectlyBackward) {
       const backwardRow = color === COLORS.WHITE ? row + 1 : row - 1;
       if (isInsideBoard(backwardRow, col) && !getPiece(board, backwardRow, col)) {
