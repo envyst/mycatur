@@ -529,6 +529,7 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
         isSpecialized: gameState?.isSpecialized || false,
         specializedStatusById: gameState?.specializedStatusById || {},
         lastMovedPieceIdByColor: gameState?.lastMovedPieceIdByColor || { white: null, black: null },
+        specializedCaptureCountsById: gameState?.specializedCaptureCountsById || {},
       });
       if (moves.some(move => move.row === targetRow && move.col === targetCol)) {
         return true;
