@@ -401,38 +401,25 @@ export function createGame() {
       for (let col = 0; col < state.board[row].length; col += 1) {
         const piece = state.board[row][col];
         if (!piece || piece.specialization !== 'Gunslinger' || !piece.id) continue;
-        const prev = state.gunslingerStateById?.[piece.id] || null;
-        let matched = null;
+        const prev = state.gunslingerStateById?.[piece.id] || { targets: {} };
+        const nextTargets = {};
 
         for (let r = 0; r < state.board.length; r += 1) {
           for (let c = 0; c < state.board[r].length; c += 1) {
             const other = state.board[r][c];
-            if (!other || other.color === piece.color || other.type === 'king') continue;
+            if (!other || other.color === piece.color || other.type === 'king' || !other.id) continue;
             const threatens = pieceThreatensSquare(piece, row, col, r, c);
             const threatenedBack = pieceThreatensSquare(other, r, c, row, col);
-            if (threatens && threatenedBack) {
-              matched = other;
-              break;
-            }
+            if (!threatens || !threatenedBack) continue;
+            const prevTarget = prev.targets?.[other.id] || { armed: false, pending: false };
+            nextTargets[other.id] = {
+              armed: prevTarget.armed || prevTarget.pending,
+              pending: !prevTarget.armed && !prevTarget.pending,
+            };
           }
-          if (matched) break;
         }
 
-        if (!matched) continue;
-
-        if (prev && prev.targetId === matched.id) {
-          next[piece.id] = {
-            targetId: matched.id,
-            armed: prev.armed || prev.pending,
-            pending: false,
-          };
-        } else {
-          next[piece.id] = {
-            targetId: matched.id,
-            armed: false,
-            pending: true,
-          };
-        }
+        next[piece.id] = { targets: nextTargets };
       }
     }
 
@@ -442,26 +429,26 @@ export function createGame() {
   function tryTriggerGunslingerAction(piece, row, col) {
     if (!piece?.id || piece.specialization !== 'Gunslinger') return false;
     const gs = state.gunslingerStateById?.[piece.id];
-    if (!gs?.armed || !gs?.targetId) return false;
+    const armedTargetIds = Object.entries(gs?.targets || {})
+      .filter(([, info]) => info?.armed)
+      .map(([targetId]) => targetId);
+    if (!armedTargetIds.length) return false;
 
-    let targetPos = null;
+    pushSandboxHistorySnapshot?.();
+    let destroyedCount = 0;
     for (let r = 0; r < state.board.length; r += 1) {
       for (let c = 0; c < state.board[r].length; c += 1) {
         const other = state.board[r][c];
-        if (other?.id === gs.targetId) {
-          targetPos = { row: r, col: c, piece: other };
-          break;
+        if (other?.id && armedTargetIds.includes(other.id)) {
+          state.board[r][c] = null;
+          destroyedCount += 1;
         }
       }
-      if (targetPos) break;
     }
 
-    if (!targetPos) return false;
-    pushSandboxHistorySnapshot?.();
-    state.board[targetPos.row][targetPos.col] = null;
     state.currentTurn = getOpponentColor(piece.color);
-    state.statusMessage = `Gunslinger destroyed ${targetPos.piece.color} ${targetPos.piece.type}.`;
-    state.gunslingerStateById = { ...(state.gunslingerStateById || {}), [piece.id]: { targetId: null, armed: false, pending: false } };
+    state.statusMessage = `Gunslinger destroyed ${destroyedCount} target${destroyedCount === 1 ? '' : 's'}.`;
+    state.gunslingerStateById = { ...(state.gunslingerStateById || {}), [piece.id]: { targets: {} } };
     clearSelection();
     updateGameStatus();
     redraw();

@@ -100,7 +100,9 @@ export function renderBoard(state, onSquareClick) {
         span.className = `piece ${piece.color === 'white' ? 'white-piece' : 'black-piece'}`;
         span.textContent = getPieceSymbol(piece);
         const isFrozen = Boolean(state?.specializedStatusById?.[piece.id]?.frozen);
+        const isSniped = Boolean(Object.values(state?.gunslingerStateById || {}).some(gs => gs?.targets?.[piece.id]?.armed));
         const frozenFlag = isFrozen ? ' — Frozen' : '';
+        const snipedFlag = isSniped ? ' — Sniped' : '';
         if (isFrozen) {
           span.style.color = piece.color === 'white' ? '#8fd3ff' : '#2e6dff';
           span.style.textShadow = piece.color === 'white'
@@ -108,7 +110,14 @@ export function renderBoard(state, onSquareClick) {
             : '0 0 8px rgba(46, 109, 255, 0.85), 0 0 2px rgba(10,20,60,0.95)';
           span.style.filter = 'drop-shadow(0 0 2px rgba(120,200,255,0.65))';
         }
-        span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}` : `${getPieceLabel(piece)}${frozenFlag}`;
+        if (isSniped) {
+          span.style.color = piece.color === 'white' ? '#ff77c8' : '#8a1124';
+          span.style.textShadow = piece.color === 'white'
+            ? '0 0 8px rgba(255, 119, 200, 0.85), 0 0 2px rgba(255,230,245,0.9)'
+            : '0 0 8px rgba(138, 17, 36, 0.85), 0 0 2px rgba(45,0,0,0.95)';
+          span.style.filter = 'drop-shadow(0 0 2px rgba(255,80,120,0.65))';
+        }
+        span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}${snipedFlag}` : `${getPieceLabel(piece)}${frozenFlag}${snipedFlag}`;
         square.appendChild(span);
 
         const customMarker = piece?.customMarker ? abbreviateSandboxMarker(piece.customMarker) : '';
