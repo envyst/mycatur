@@ -168,48 +168,45 @@ function collectBouncerMoves(board, row, col, color, gameState) {
   for (const [startDr, startDc] of directions) {
     let dr = startDr;
     let dc = startDc;
-    let r = row + dr;
-    let c = col + dc;
+    let r = row;
+    let c = col;
     let bounced = false;
 
     while (true) {
-      if (!isInsideBoard(r, c)) {
-        if (bounced) break;
-        const hitTopBottom = r < 0 || r >= BOARD_SIZE;
-        const hitLeftRight = c < 0 || c >= BOARD_SIZE;
-        if (!hitTopBottom && !hitLeftRight) break;
+      const nextR = r + dr;
+      const nextC = c + dc;
 
-        // bishop-style bounce continuity: flip only the axis that hit the wall
+      if (!isInsideBoard(nextR, nextC)) {
+        if (bounced) break;
+        const hitTopBottom = nextR < 0 || nextR >= BOARD_SIZE;
+        const hitLeftRight = nextC < 0 || nextC >= BOARD_SIZE;
+        if (!hitTopBottom && !hitLeftRight) break;
         if (hitTopBottom) dr *= -1;
         if (hitLeftRight) dc *= -1;
         bounced = true;
-
-        r = (hitTopBottom ? row : r - dr) + dr;
-        c = (hitLeftRight ? col : c - dc) + dc;
-
-        // normalize to the first in-bounds square after bounce from the wall
-        while (!isInsideBoard(r, c)) {
-          r += dr;
-          c += dc;
-        }
+        continue;
       }
 
+      r = nextR;
+      c = nextC;
       const target = board[r][c];
+
       if (!target) {
         moves.push({ row: r, col: c });
-      } else if (target.color !== color) {
-        const targetRules = getSpecializedRulesFromPiece(target);
-        const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
-        if (!captureSuppressed && movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
-          moves.push({ row: r, col: c });
-        }
-        break;
-      } else {
+        continue;
+      }
+
+      if (target.color === color) {
+        // allies block normally; they never trigger bounce
         break;
       }
 
-      r += dr;
-      c += dc;
+      const targetRules = getSpecializedRulesFromPiece(target);
+      const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+      if (!captureSuppressed && movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
+        moves.push({ row: r, col: c });
+      }
+      break;
     }
   }
 
