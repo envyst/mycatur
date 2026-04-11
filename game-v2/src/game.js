@@ -737,11 +737,21 @@ export function createGame() {
     if (piece.specialization === 'Dancer') {
       const enemyColor = getOpponentColor(piece.color);
       if (isKingInCheck(state.board, enemyColor, state)) {
-        state.dancerStateById = { ...(state.dancerStateById || {}), [piece.id]: { armed: true } };
+        state.dancerStateById = { ...(state.dancerStateById || {}), [piece.id]: { armed: true, color: piece.color } };
       }
     } else if (Object.keys(state.dancerStateById || {}).length) {
-      state.dancerStateById = {};
-      state.activeDancerSpecialPieceId = null;
+      const sameSideArmedEntries = Object.entries(state.dancerStateById || {}).filter(([, info]) => info?.armed && info?.color === piece.color);
+      if (sameSideArmedEntries.length) {
+        state.dancerStateById = Object.fromEntries(
+          Object.entries(state.dancerStateById || {}).map(([id, info]) => {
+            if (info?.armed && info?.color === piece.color) {
+              return [id, { ...info, armed: false }];
+            }
+            return [id, info];
+          })
+        );
+        state.activeDancerSpecialPieceId = null;
+      }
     }
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
