@@ -175,19 +175,23 @@ function collectBouncerMoves(board, row, col, color, gameState) {
     while (true) {
       if (!isInsideBoard(r, c)) {
         if (bounced) break;
-        let nextDr = dr;
-        let nextDc = dc;
-        const outRow = r < 0 || r >= BOARD_SIZE;
-        const outCol = c < 0 || c >= BOARD_SIZE;
-        if (outRow) nextDr *= -1;
-        if (outCol) nextDc *= -1;
-        if (!outRow && !outCol) break;
+        const hitTopBottom = r < 0 || r >= BOARD_SIZE;
+        const hitLeftRight = c < 0 || c >= BOARD_SIZE;
+        if (!hitTopBottom && !hitLeftRight) break;
+
+        // bishop-style bounce continuity: flip only the axis that hit the wall
+        if (hitTopBottom) dr *= -1;
+        if (hitLeftRight) dc *= -1;
         bounced = true;
-        dr = nextDr;
-        dc = nextDc;
-        r = Math.min(Math.max(r, 0), BOARD_SIZE - 1);
-        c = Math.min(Math.max(c, 0), BOARD_SIZE - 1);
-        continue;
+
+        r = (hitTopBottom ? row : r - dr) + dr;
+        c = (hitLeftRight ? col : c - dc) + dc;
+
+        // normalize to the first in-bounds square after bounce from the wall
+        while (!isInsideBoard(r, c)) {
+          r += dr;
+          c += dc;
+        }
       }
 
       const target = board[r][c];
