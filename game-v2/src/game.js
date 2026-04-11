@@ -739,6 +739,9 @@ export function createGame() {
       if (isKingInCheck(state.board, enemyColor, state)) {
         state.dancerStateById = { ...(state.dancerStateById || {}), [piece.id]: { armed: true } };
       }
+    } else if (Object.keys(state.dancerStateById || {}).length) {
+      state.dancerStateById = {};
+      state.activeDancerSpecialPieceId = null;
     }
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
