@@ -381,6 +381,7 @@ export function createGame() {
       [piece.id]: { pendingFreeze: false, pendingFromTurn: null, frozen: false },
     };
     state.currentTurn = getOpponentColor(piece.color);
+    clearSelection();
     state.statusMessage = `${piece.color} ${piece.type} spent a turn to unfreeze.`;
     updateGameStatus();
     redraw();
