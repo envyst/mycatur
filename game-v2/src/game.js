@@ -657,7 +657,6 @@ export function createGame() {
   async function finalizeTurn(move = null) {
     state.currentTurn = getOpponentColor(state.currentTurn);
     state.activeDancerSpecialPieceId = null;
-    state.dancerTapArmedPieceId = null;
     incrementPositionHistory(state);
     clearSelection();
     updateIcicleFreezeState();
@@ -969,21 +968,13 @@ export function createGame() {
           return;
         }
         if (piece?.specialization === 'Dancer' && state.dancerStateById?.[piece.id]?.armed) {
-          if (state.activeDancerSpecialPieceId === piece.id) {
-            state.activeDancerSpecialPieceId = null;
-            state.dancerTapArmedPieceId = null;
-            clearSelection();
-            state.statusMessage = 'Dancer special mode cancelled.';
-            redraw();
-            return;
-          }
-          if (state.dancerTapArmedPieceId === piece.id) {
+          if (!state.activeDancerSpecialPieceId) {
             enterDancerSpecialMode(piece);
-            state.dancerTapArmedPieceId = null;
             return;
           }
-          state.dancerTapArmedPieceId = piece.id;
-          state.statusMessage = 'Tap Dancer again to enter special mode.';
+          clearSelection();
+          state.activeDancerSpecialPieceId = null;
+          state.statusMessage = 'Dancer special mode cancelled.';
           redraw();
           return;
         }
@@ -998,7 +989,6 @@ export function createGame() {
       const activeId = state.activeDancerSpecialPieceId;
       if (!activeInfo || activeInfo.row !== row || activeInfo.col !== col) {
         state.activeDancerSpecialPieceId = null;
-        state.dancerTapArmedPieceId = null;
         clearSelection();
         state.statusMessage = 'Dancer special mode cancelled.';
         if (piece && piece.color === state.currentTurn) {
@@ -1007,17 +997,8 @@ export function createGame() {
       }
     }
     if (piece && piece.color === state.currentTurn) {
-      if (state.dancerTapArmedPieceId && piece.id === state.dancerTapArmedPieceId) {
-        // Preserve second-tap armed state; do not overwrite with generic reselection.
-        redraw();
-        return;
-      }
-      if (state.dancerTapArmedPieceId && piece.id !== state.dancerTapArmedPieceId) {
-        state.dancerTapArmedPieceId = null;
-      }
       setSelection(row, col);
     } else {
-      state.dancerTapArmedPieceId = null;
       clearSelection();
     }
     redraw();
