@@ -736,8 +736,11 @@ export function createGame() {
     state.lastMovedPieceIdByColor = { ...(state.lastMovedPieceIdByColor || { white: null, black: null }), [piece.color]: piece.id || null };
     if (piece.specialization === 'Dancer') {
       const enemyColor = getOpponentColor(piece.color);
+      const wasUsingSpecialMove = state.activeDancerSpecialPieceId === piece.id;
       if (isKingInCheck(state.board, enemyColor, state)) {
         state.dancerStateById = { ...(state.dancerStateById || {}), [piece.id]: { armed: true, color: piece.color } };
+      } else if (!wasUsingSpecialMove && state.dancerStateById?.[piece.id]?.armed) {
+        state.dancerStateById = { ...(state.dancerStateById || {}), [piece.id]: { armed: false, color: piece.color } };
       }
     } else if (Object.keys(state.dancerStateById || {}).length) {
       const sameSideArmedEntries = Object.entries(state.dancerStateById || {}).filter(([, info]) => info?.armed && info?.color === piece.color);
