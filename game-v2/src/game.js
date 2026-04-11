@@ -850,7 +850,14 @@ export function createGame() {
 
     const piece = getPiece(state.board, row, col);
     if (piece && state.isSpecialized && piece.color === state.currentTurn && state.specializedStatusById?.[piece.id]?.frozen) {
-      spendTurnToUnfreeze(piece);
+      if (state.selectedSquare && sameSquare(state.selectedSquare, { row, col })) {
+        spendTurnToUnfreeze(piece);
+        return;
+      }
+      state.selectedSquare = { row, col };
+      state.validMoves = [{ row, col }];
+      state.statusMessage = `${piece.color} ${piece.type} is Frozen. Tap again to spend the turn and unfreeze.`;
+      redraw();
       return;
     }
     if (state.selectedSquare) {
