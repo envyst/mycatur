@@ -73,5 +73,6 @@ export function createInitialState(options = {}) {
     gunslingerStateById: {},
     dancerStateById: {},
     activeDancerSpecialPieceId: null,
+    dancerTapArmedPieceId: null,
   };
 }
