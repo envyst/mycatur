@@ -387,6 +387,86 @@ export function createGame() {
     return true;
   }
 
+
+  function pieceThreatensSquare(piece, fromRow, fromCol, targetRow, targetCol) {
+    const moves = getPseudoLegalMoves(state.board, fromRow, fromCol, state);
+    return moves.some(move => move.row === targetRow && move.col === targetCol);
+  }
+
+  function updateGunslingerThreatState() {
+    if (!state.isSpecialized) return;
+    const next = {};
+
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        const piece = state.board[row][col];
+        if (!piece || piece.specialization !== 'Gunslinger' || !piece.id) continue;
+        const prev = state.gunslingerStateById?.[piece.id] || null;
+        let matched = null;
+
+        for (let r = 0; r < state.board.length; r += 1) {
+          for (let c = 0; c < state.board[r].length; c += 1) {
+            const other = state.board[r][c];
+            if (!other || other.color === piece.color || other.type === 'king') continue;
+            const threatens = pieceThreatensSquare(piece, row, col, r, c);
+            const threatenedBack = pieceThreatensSquare(other, r, c, row, col);
+            if (threatens && threatenedBack) {
+              matched = other;
+              break;
+            }
+          }
+          if (matched) break;
+        }
+
+        if (!matched) continue;
+
+        if (prev && prev.targetId === matched.id) {
+          next[piece.id] = {
+            targetId: matched.id,
+            armed: prev.armed || prev.pending,
+            pending: false,
+          };
+        } else {
+          next[piece.id] = {
+            targetId: matched.id,
+            armed: false,
+            pending: true,
+          };
+        }
+      }
+    }
+
+    state.gunslingerStateById = next;
+  }
+
+  function tryTriggerGunslingerAction(piece, row, col) {
+    if (!piece?.id || piece.specialization !== 'Gunslinger') return false;
+    const gs = state.gunslingerStateById?.[piece.id];
+    if (!gs?.armed || !gs?.targetId) return false;
+
+    let targetPos = null;
+    for (let r = 0; r < state.board.length; r += 1) {
+      for (let c = 0; c < state.board[r].length; c += 1) {
+        const other = state.board[r][c];
+        if (other?.id === gs.targetId) {
+          targetPos = { row: r, col: c, piece: other };
+          break;
+        }
+      }
+      if (targetPos) break;
+    }
+
+    if (!targetPos) return false;
+    pushSandboxHistorySnapshot?.();
+    state.board[targetPos.row][targetPos.col] = null;
+    state.currentTurn = getOpponentColor(piece.color);
+    state.statusMessage = `Gunslinger destroyed ${targetPos.piece.color} ${targetPos.piece.type}.`;
+    state.gunslingerStateById = { ...(state.gunslingerStateById || {}), [piece.id]: { targetId: null, armed: false, pending: false } };
+    updateGameStatus();
+    redraw();
+    return true;
+  }
+
   function normalizeAssignmentSlots(assignments) {
     return {
       white: (assignments.white && assignments.white.length ? assignments.white : [null]).map(item => item || null),
@@ -521,6 +601,7 @@ export function createGame() {
     incrementPositionHistory(state);
     clearSelection();
     updateIcicleFreezeState();
+    updateGunslingerThreatState();
     updateGameStatus();
     await persistState(move);
   }
@@ -749,6 +830,10 @@ export function createGame() {
     if (state.isSandbox) {
       const piece = getPiece(state.board, row, col);
       if (state.selectedSquare && sameSquare(state.selectedSquare, { row, col })) {
+        const selectedPiece = getPiece(state.board, row, col);
+        if (selectedPiece?.specialization === 'Gunslinger' && tryTriggerGunslingerAction(selectedPiece, row, col)) {
+          return;
+        }
         clearSelection();
         state.statusMessage = 'Selection cleared.';
         redraw();
@@ -789,6 +874,9 @@ export function createGame() {
         return;
       }
       if (sameSquare(state.selectedSquare, { row, col })) {
+        if (piece?.specialization === 'Gunslinger' && tryTriggerGunslingerAction(piece, row, col)) {
+          return;
+        }
         clearSelection();
         redraw();
         return;
@@ -889,6 +977,7 @@ export function createGame() {
     applySpecializationsToBoard();
     resolveBlueprintTransformations();
     updateIcicleFreezeState();
+    updateGunslingerThreatState();
     clearSelection();
     if (!state.isSandbox && Object.keys(state.positionHistory).length === 0) {
       incrementPositionHistory(state);

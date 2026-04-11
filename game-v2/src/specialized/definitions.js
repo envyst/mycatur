@@ -55,6 +55,12 @@ export const SPECIALIZED_EFFECTS = {
       gainsOneStepAfterMovingLastTurn: true,
     },
   },
+  'Gunslinger': {
+    baseType: 'bishop',
+    rules: {
+      gunslingerMutualThreatKill: true,
+    },
+  },
   'Hero Pawn': {
     baseType: 'pawn',
     rules: {

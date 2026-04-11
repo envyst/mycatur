@@ -70,5 +70,6 @@ export function createInitialState(options = {}) {
     specializedSetupSide: 'white',
     lastMovedPieceIdByColor: { white: null, black: null },
     specializedCaptureCountsById: {},
+    gunslingerStateById: {},
   };
 }
