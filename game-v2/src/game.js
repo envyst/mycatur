@@ -657,7 +657,6 @@ export function createGame() {
   async function finalizeTurn(move = null) {
     state.currentTurn = getOpponentColor(state.currentTurn);
     state.activeDancerSpecialPieceId = null;
-    state.dancerTapArmedPieceId = null;
     incrementPositionHistory(state);
     clearSelection();
     updateIcicleFreezeState();
@@ -971,20 +970,12 @@ export function createGame() {
         if (piece?.specialization === 'Dancer' && state.dancerStateById?.[piece.id]?.armed) {
           if (state.activeDancerSpecialPieceId === piece.id) {
             state.activeDancerSpecialPieceId = null;
-            state.dancerTapArmedPieceId = null;
             clearSelection();
             state.statusMessage = 'Dancer special mode cancelled.';
             redraw();
             return;
           }
-          if (state.dancerTapArmedPieceId === piece.id) {
-            enterDancerSpecialMode(piece);
-            state.dancerTapArmedPieceId = null;
-            return;
-          }
-          state.dancerTapArmedPieceId = piece.id;
-          state.statusMessage = 'Tap Dancer again to enter special mode.';
-          redraw();
+          enterDancerSpecialMode(piece);
           return;
         }
         clearSelection();
@@ -995,24 +986,19 @@ export function createGame() {
 
     if (state.activeDancerSpecialPieceId) {
       const activeInfo = findPieceById(state.activeDancerSpecialPieceId);
-      const activeId = state.activeDancerSpecialPieceId;
       if (!activeInfo || activeInfo.row !== row || activeInfo.col !== col) {
         state.activeDancerSpecialPieceId = null;
-        state.dancerTapArmedPieceId = null;
         clearSelection();
         state.statusMessage = 'Dancer special mode cancelled.';
         if (piece && piece.color === state.currentTurn) {
-          state.dancerStateById = { ...(state.dancerStateById || {}), [activeId]: { armed: false } };
+          // selecting another piece cancels the special opportunity immediately
+          state.dancerStateById = { ...(state.dancerStateById || {}), [state.activeDancerSpecialPieceId]: { armed: false } };
         }
       }
     }
     if (piece && piece.color === state.currentTurn) {
-      if (state.dancerTapArmedPieceId && piece.id !== state.dancerTapArmedPieceId) {
-        state.dancerTapArmedPieceId = null;
-      }
       setSelection(row, col);
     } else {
-      state.dancerTapArmedPieceId = null;
       clearSelection();
     }
     redraw();
