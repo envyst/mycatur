@@ -481,7 +481,9 @@ export function createGame() {
 
     // one-step non-capturing bishop move
     for (const move of getNonCapturingBishopMoves(state.board, row, col)) {
-      destinations.set(`${move.row}:${move.col}`, move);
+      if (!(move.row === row && move.col === col)) {
+        destinations.set(`${move.row}:${move.col}`, move);
+      }
     }
 
     // two-step non-capturing bishop move
@@ -490,7 +492,9 @@ export function createGame() {
       boardAfterFirst[first.row][first.col] = boardAfterFirst[row][col];
       boardAfterFirst[row][col] = null;
       for (const second of getNonCapturingBishopMoves(boardAfterFirst, first.row, first.col)) {
-        destinations.set(`${second.row}:${second.col}`, second);
+        if (!(second.row === row && second.col === col)) {
+          destinations.set(`${second.row}:${second.col}`, second);
+        }
       }
     }
 
@@ -735,6 +739,8 @@ export function createGame() {
       if (isKingInCheck(state.board, enemyColor, state)) {
         state.dancerStateById = { ...(state.dancerStateById || {}), [piece.id]: { armed: true } };
       }
+    } else if (Object.keys(state.dancerStateById || {}).length) {
+      state.dancerStateById = {};
     }
     state.moveHistory = [...state.moveHistory, provisionalSan];
     state.moveLog = [...state.moveLog, formatMoveEntry(state.moveHistory.length - 1, provisionalSan)];
@@ -963,6 +969,7 @@ export function createGame() {
           if (state.activeDancerSpecialPieceId === piece.id) {
             state.activeDancerSpecialPieceId = null;
             clearSelection();
+            state.statusMessage = 'Dancer special mode cancelled.';
             redraw();
             return;
           }
@@ -977,10 +984,15 @@ export function createGame() {
 
     if (piece && piece.color === state.currentTurn) {
       if (state.activeDancerSpecialPieceId && piece.id !== state.activeDancerSpecialPieceId) {
+        const activeId = state.activeDancerSpecialPieceId;
         state.activeDancerSpecialPieceId = null;
+        state.dancerStateById = { ...(state.dancerStateById || {}), [activeId]: { armed: false } };
       }
       setSelection(row, col);
     } else {
+      if (state.activeDancerSpecialPieceId) {
+        state.activeDancerSpecialPieceId = null;
+      }
       clearSelection();
     }
     redraw();
