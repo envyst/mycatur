@@ -19,6 +19,12 @@ export const SPECIALIZED_EFFECTS = {
       paralyzesAttackedPieces: true,
     },
   },
+  'Bouncer': {
+    baseType: 'bishop',
+    rules: {
+      canBounceOnceOffEdge: true,
+    },
+  },
   'Blueprint': {
     baseType: 'pawn',
     rules: {

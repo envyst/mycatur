@@ -158,6 +158,60 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
   };
 }
 
+
+function collectBouncerMoves(board, row, col, color, gameState) {
+  const moves = [];
+  const movingPiece = getPiece(board, row, col);
+  const movingRules = getSpecializedRulesFromPiece(movingPiece);
+  const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+  for (const [startDr, startDc] of directions) {
+    let dr = startDr;
+    let dc = startDc;
+    let r = row + dr;
+    let c = col + dc;
+    let bounced = false;
+
+    while (true) {
+      if (!isInsideBoard(r, c)) {
+        if (bounced) break;
+        let nextDr = dr;
+        let nextDc = dc;
+        const outRow = r < 0 || r >= BOARD_SIZE;
+        const outCol = c < 0 || c >= BOARD_SIZE;
+        if (outRow) nextDr *= -1;
+        if (outCol) nextDc *= -1;
+        if (!outRow && !outCol) break;
+        bounced = true;
+        dr = nextDr;
+        dc = nextDc;
+        r = Math.min(Math.max(r, 0), BOARD_SIZE - 1);
+        c = Math.min(Math.max(c, 0), BOARD_SIZE - 1);
+        continue;
+      }
+
+      const target = board[r][c];
+      if (!target) {
+        moves.push({ row: r, col: c });
+      } else if (target.color !== color) {
+        const targetRules = getSpecializedRulesFromPiece(target);
+        const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
+        if (!captureSuppressed && movingRules.canCapture !== false && targetRules.canBeCaptured !== false) {
+          moves.push({ row: r, col: c });
+        }
+        break;
+      } else {
+        break;
+      }
+
+      r += dr;
+      c += dc;
+    }
+  }
+
+  return moves;
+}
+
 function collectDirectionalMoves(board, row, col, color, directions, gameState) {
   const moves = [];
 
@@ -319,8 +373,10 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
   }
 
   if (type === PIECE_TYPES.BISHOP) {
-    const moves = collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
     const rules = getSpecializedRulesFromPiece(piece);
+    const moves = rules.canBounceOnceOffEdge
+      ? collectBouncerMoves(board, row, col, color, gameState)
+      : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
     if (rules.canStepDirectlyBackward) {
       const backwardRow = color === COLORS.WHITE ? row + 1 : row - 1;
       if (isInsideBoard(backwardRow, col) && !getPiece(board, backwardRow, col)) {
