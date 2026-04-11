@@ -1007,11 +1007,6 @@ export function createGame() {
       }
     }
     if (piece && piece.color === state.currentTurn) {
-      if (state.dancerTapArmedPieceId && piece.id === state.dancerTapArmedPieceId) {
-        // Preserve second-tap armed state; do not overwrite with generic reselection.
-        redraw();
-        return;
-      }
       if (state.dancerTapArmedPieceId && piece.id !== state.dancerTapArmedPieceId) {
         state.dancerTapArmedPieceId = null;
       }
