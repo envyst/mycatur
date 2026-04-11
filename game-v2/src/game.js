@@ -481,7 +481,9 @@ export function createGame() {
 
     // one-step non-capturing bishop move
     for (const move of getNonCapturingBishopMoves(state.board, row, col)) {
-      destinations.set(`${move.row}:${move.col}`, move);
+      if (!(move.row === row && move.col === col)) {
+        destinations.set(`${move.row}:${move.col}`, move);
+      }
     }
 
     // two-step non-capturing bishop move
@@ -490,7 +492,9 @@ export function createGame() {
       boardAfterFirst[first.row][first.col] = boardAfterFirst[row][col];
       boardAfterFirst[row][col] = null;
       for (const second of getNonCapturingBishopMoves(boardAfterFirst, first.row, first.col)) {
-        destinations.set(`${second.row}:${second.col}`, second);
+        if (!(second.row === row && second.col === col)) {
+          destinations.set(`${second.row}:${second.col}`, second);
+        }
       }
     }
 
