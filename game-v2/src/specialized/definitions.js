@@ -31,6 +31,12 @@ export const SPECIALIZED_EFFECTS = {
       canStepDirectlyBackward: true,
     },
   },
+  'Epee Pawn': {
+    baseType: 'pawn',
+    rules: {
+      canGlobalEnPassant: true,
+    },
+  },
   'Camel': {
     baseType: 'knight',
     rules: {
