@@ -295,6 +295,23 @@ function collectBouncerMoves(board, row, col, color, gameState) {
   return moves;
 }
 
+
+function collectNonCapturingDirectionalMoves(board, row, col, directions) {
+  const moves = [];
+  for (const [dr, dc] of directions) {
+    let r = row + dr;
+    let c = col + dc;
+    while (isInsideBoard(r, c)) {
+      const target = board[r][c];
+      if (target) break;
+      moves.push({ row: r, col: c });
+      r += dr;
+      c += dc;
+    }
+  }
+  return moves;
+}
+
 function collectDirectionalMoves(board, row, col, color, directions, gameState) {
   const moves = [];
 
@@ -518,11 +535,13 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
 
   if (type === PIECE_TYPES.BISHOP) {
     const rules = getSpecializedRulesFromPiece(piece);
-    const normalBishopMoves = rules.dynamicMarauderRange
-      ? collectMarauderMoves(board, row, col, color, gameState)
-      : rules.canBounceOnceOffEdge
-        ? collectBouncerMoves(board, row, col, color, gameState)
-        : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
+    const normalBishopMoves = rules.delayedPassThroughKills
+      ? collectNonCapturingDirectionalMoves(board, row, col, [[-1, -1], [-1, 1], [1, -1], [1, 1]])
+      : rules.dynamicMarauderRange
+        ? collectMarauderMoves(board, row, col, color, gameState)
+        : rules.canBounceOnceOffEdge
+          ? collectBouncerMoves(board, row, col, color, gameState)
+          : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
     const specialBladeRunnerMoves = rules.delayedPassThroughKills ? collectBladeRunnerMoves(board, row, col, color) : [];
     const merged = new Map();
     [...normalBishopMoves, ...specialBladeRunnerMoves].forEach(move => {
