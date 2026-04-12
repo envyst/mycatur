@@ -326,7 +326,12 @@ export function createGame() {
         const piece = state.board[row][col];
         if (!piece || piece.specialization !== 'Pinata') continue;
         const randomName = candidates[Math.floor(Math.random() * candidates.length)];
-        state.board[row][col] = { ...piece, specialization: randomName };
+        const randomDef = SPECIALIZED_EFFECTS[randomName] || null;
+        state.board[row][col] = {
+          ...piece,
+          type: randomDef?.baseType || piece.type,
+          specialization: randomName,
+        };
       }
     }
   }
