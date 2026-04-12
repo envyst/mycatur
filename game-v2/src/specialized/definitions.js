@@ -108,6 +108,12 @@ export const SPECIALIZED_EFFECTS = {
       extendedCenterDiagonalCapture: true,
     },
   },
+  'Warp Jumper': {
+    baseType: 'pawn',
+    rules: {
+      canJumpEnemyPawnChainsForward: true,
+    },
+  },
   'Phase Rook': {
     baseType: 'rook',
     rules: {

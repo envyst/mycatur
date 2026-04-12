@@ -318,6 +318,25 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
       }
     }
 
+    if (rules.canJumpEnemyPawnChainsForward) {
+      let scanRow = row + dir;
+      let seenEnemyPawn = false;
+      while (isInsideBoard(scanRow, col)) {
+        const blocker = getPiece(board, scanRow, col);
+        if (!blocker) {
+          if (seenEnemyPawn) {
+            moves.push({ row: scanRow, col });
+          }
+          break;
+        }
+        if (blocker.color === color || blocker.type !== PIECE_TYPES.PAWN) {
+          break;
+        }
+        seenEnemyPawn = true;
+        scanRow += dir;
+      }
+    }
+
     const captureSuppressed = gameState?.isSpecialized && pieceHasCaptureSuppressionFromAdjacentEnemy(board, row, col);
 
     if (rules.canCapture !== false && !captureSuppressed) {
