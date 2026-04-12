@@ -27,6 +27,6 @@
 27.Pinata (knight) =At the start of the game, transform into a random Pixie Chess piece.
 28.Rocketman (king) =Once per game, spend a turn to blast off to a random tile.
 29. sumo rook (rook) =Knock pieces back instead of capturing.
-30. war automator (pawn) = Automatically moves forward 1 tile whenever a piece dies.
+30. war automaton (pawn) = Automatically moves forward 1 tile whenever a piece dies.
 31. War jumper (pawn)= Can jump through enemy pawns.
 32. 
