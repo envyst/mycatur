@@ -67,6 +67,12 @@ export const SPECIALIZED_EFFECTS = {
       gainsOneStepAfterMovingLastTurn: true,
     },
   },
+  'Fission Reactor': {
+    baseType: 'queen',
+    rules: {
+      explodesOnFifthCapture: true,
+    },
+  },
   'Golden Pawn': {
     baseType: 'pawn',
     rules: {

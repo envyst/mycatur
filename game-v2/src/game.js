@@ -533,6 +533,29 @@ export function createGame() {
   }
 
 
+
+  function triggerFissionReactorExplosion(pieceId, color) {
+    const pos = findPieceById(pieceId);
+    if (!pos) return 0;
+    let destroyed = 0;
+
+    state.board[pos.row][pos.col] = null;
+    destroyed += 1;
+
+    for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+      const r = pos.row + dr;
+      const c = pos.col + dc;
+      if (r < 0 || r >= 8 || c < 0 || c >= 8) continue;
+      const target = state.board[r][c];
+      if (target && target.color !== color) {
+        state.board[r][c] = null;
+        destroyed += 1;
+      }
+    }
+
+    return destroyed;
+  }
+
   function transformFirstAlliedPawnToGolden(color) {
     for (let row = 0; row < state.board.length; row += 1) {
       for (let col = 0; col < state.board[row].length; col += 1) {
@@ -764,6 +787,17 @@ export function createGame() {
       const transformed = transformFirstAlliedPawnToGolden(piece.color);
       if (transformed) {
         state.statusMessage = `${piece.color} Banker transformed an allied pawn into a Golden Pawn.`;
+      }
+    }
+    if (piece?.id && piece.specialization === 'Fission Reactor' && applied.isCapture) {
+      const nextCount = (state.specializedCaptureCountsById?.[piece.id] || 0) + 1;
+      state.specializedCaptureCountsById = {
+        ...(state.specializedCaptureCountsById || {}),
+        [piece.id]: nextCount,
+      };
+      if (nextCount >= 5) {
+        const destroyed = triggerFissionReactorExplosion(piece.id, piece.color);
+        state.statusMessage = `${piece.color} Fission Reactor exploded and destroyed ${destroyed} piece${destroyed === 1 ? '' : 's'}.`;
       }
     }
     const nextTurn = getOpponentColor(piece.color);
