@@ -49,6 +49,12 @@ export const SPECIALIZED_EFFECTS = {
       gainsSpecialTwoStepAfterChecking: true,
     },
   },
+  'Djinn': {
+    baseType: 'bishop',
+    rules: {
+      canDissipateAndReturnOnNextCapture: true,
+    },
+  },
   'Electroknight': {
     baseType: 'knight',
     rules: {

@@ -474,6 +474,40 @@ export function createGame() {
     return moves;
   }
 
+
+  function tryDissipateDjinn(piece, row, col) {
+    if (!piece?.id || piece.specialization !== 'Djinn') return false;
+    state.board[row][col] = null;
+    state.djinnStateById = {
+      ...(state.djinnStateById || {}),
+      [piece.id]: {
+        piece: { ...piece },
+        returnRow: row,
+        returnCol: col,
+        dissipated: true,
+      },
+    };
+    state.currentTurn = getOpponentColor(piece.color);
+    clearSelection();
+    state.statusMessage = `${piece.color} Djinn dissipated and will return on the next capture.`;
+    updateGameStatus();
+    redraw();
+    return true;
+  }
+
+  function resolveDjinnReturnsOnCapture() {
+    const entries = Object.entries(state.djinnStateById || {}).filter(([, info]) => info?.dissipated && info?.piece);
+    if (!entries.length) return false;
+    for (const [id, info] of entries) {
+      state.board[info.returnRow][info.returnCol] = { ...info.piece };
+      state.djinnStateById = {
+        ...(state.djinnStateById || {}),
+        [id]: { ...info, dissipated: false },
+      };
+    }
+    return true;
+  }
+
   function computeDancerSpecialDestinations(row, col) {
     const piece = getPiece(state.board, row, col);
     if (!piece || piece.specialization !== 'Dancer') return [];
@@ -851,6 +885,9 @@ export function createGame() {
     }
     const nextTurn = getOpponentColor(piece.color);
     const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, state, state.board, nextTurn);
+    if (applied.isCapture) {
+      resolveDjinnReturnsOnCapture();
+    }
     state.lastMove = { from, to };
     state.lastMovedPieceIdByColor = { ...(state.lastMovedPieceIdByColor || { white: null, black: null }), [piece.color]: piece.id || null };
     if (piece.specialization === 'Dancer') {
@@ -1096,6 +1133,9 @@ export function createGame() {
       }
       if (sameSquare(state.selectedSquare, { row, col })) {
         if (piece?.specialization === 'Gunslinger' && tryTriggerGunslingerAction(piece, row, col)) {
+          return;
+        }
+        if (piece?.specialization === 'Djinn' && tryDissipateDjinn(piece, row, col)) {
           return;
         }
         if (piece?.specialization === 'Dancer' && state.dancerStateById?.[piece.id]?.armed) {
