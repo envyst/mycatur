@@ -163,6 +163,12 @@ export const SPECIALIZED_EFFECTS = {
       cannotCaptureThroughAllies: true,
     },
   },
+  'Rocketman': {
+    baseType: 'king',
+    rules: {
+      canBlastOffOncePerGame: true,
+    },
+  },
   'Pilgrim': {
     baseType: 'bishop',
     rules: {

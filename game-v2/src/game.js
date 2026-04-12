@@ -501,6 +501,47 @@ export function createGame() {
   }
 
 
+
+  function getRandomEmptySquare() {
+    const empties = [];
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        if (!state.board[row][col]) empties.push({ row, col });
+      }
+    }
+    if (!empties.length) return null;
+    return empties[Math.floor(Math.random() * empties.length)] || null;
+  }
+
+  async function tryRocketmanBlastOff(piece, row, col) {
+    if (!piece?.id || piece.specialization !== 'Rocketman') return false;
+    if (state.rocketmanUsedById?.[piece.id]) {
+      state.statusMessage = 'Rocketman blast-off already used.';
+      redraw();
+      return true;
+    }
+    const target = getRandomEmptySquare();
+    if (!target) {
+      state.statusMessage = 'No empty square available for Rocketman blast-off.';
+      redraw();
+      return true;
+    }
+    state.board[target.row][target.col] = piece;
+    state.board[row][col] = null;
+    state.rocketmanUsedById = {
+      ...(state.rocketmanUsedById || {}),
+      [piece.id]: true,
+    };
+    state.lastMove = { from: { row, col }, to: { row: target.row, col: target.col } };
+    state.currentTurn = getOpponentColor(piece.color);
+    clearSelection();
+    state.statusMessage = `${piece.color} Rocketman blasted off to ${toChessCoord(target.row, target.col)}.`;
+    updateGameStatus();
+    redraw();
+    maybeDoEngineMove();
+    return true;
+  }
+
   function tryDissipateDjinn(piece, row, col) {
     if (!piece?.id || piece.specialization !== 'Djinn') return false;
     state.board[row][col] = null;
@@ -1291,6 +1332,9 @@ export function createGame() {
           return;
         }
         if (piece?.specialization === 'Djinn' && tryDissipateDjinn(piece, row, col)) {
+          return;
+        }
+        if (piece?.specialization === 'Rocketman' && await tryRocketmanBlastOff(piece, row, col)) {
           return;
         }
         if (piece?.specialization === 'Dancer' && state.dancerStateById?.[piece.id]?.armed) {
