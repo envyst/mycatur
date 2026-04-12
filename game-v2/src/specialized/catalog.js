@@ -29,7 +29,7 @@ export const SPECIALIZED_CATALOG = {
     'Hero Pawn',
     'Iron Pawn',
     'Pawn with Knife',
-    'War Automator',
+    'War Automaton',
     'Warp Jumper',
   ],
   rook: [

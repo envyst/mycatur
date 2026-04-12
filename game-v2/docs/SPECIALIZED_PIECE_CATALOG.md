@@ -33,7 +33,7 @@ No gameplay effects are implemented yet in phase 1.
 - Hero Pawn
 - Iron Pawn
 - Pawn with Knife
-- War Automator
+- War Automaton
 - Warp Jumper
 
 ## Rook specializations
