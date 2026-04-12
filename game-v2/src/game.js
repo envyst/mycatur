@@ -533,6 +533,22 @@ export function createGame() {
   }
 
   function updateGameStatus() {
+    const whiteKing = findKing(state.board, COLORS.WHITE);
+    const blackKing = findKing(state.board, COLORS.BLACK);
+    if (!whiteKing && blackKing) {
+      state.winner = COLORS.BLACK;
+      state.isDraw = false;
+      state.checkColor = null;
+      state.statusMessage = 'White king is gone.';
+      return;
+    }
+    if (!blackKing && whiteKing) {
+      state.winner = COLORS.WHITE;
+      state.isDraw = false;
+      state.checkColor = null;
+      state.statusMessage = 'Black king is gone.';
+      return;
+    }
     if (state.isSandbox) {
       const sideToMove = state.currentTurn;
       const inCheck = isKingInCheck(state.board, sideToMove, state);

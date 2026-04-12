@@ -125,6 +125,17 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
     };
   }
 
+  const movedPieceRules = getSpecializedRulesFromPiece(piece);
+  if (piece.type === PIECE_TYPES.PAWN && movedPieceRules.killsKingOnLastRank === true) {
+    const reachedLastRank = (piece.color === COLORS.WHITE && toRow === 0) || (piece.color === COLORS.BLACK && toRow === 7);
+    if (reachedLastRank) {
+      const enemyKing = findKing(nextBoard, piece.color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE);
+      if (enemyKing) {
+        nextBoard[enemyKing.row][enemyKing.col] = null;
+      }
+    }
+  }
+
   if (isPromotionSquare(piece, toRow, gameState, toCol)) {
     promotion = {
       row: toRow,
@@ -132,8 +143,6 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
       color: piece.color,
     };
   }
-
-  const movedPieceRules = getSpecializedRulesFromPiece(piece);
   if (!promotion && movedPieceRules.promoteImmediatelyOnCheck && piece.type === PIECE_TYPES.PAWN && !boardHasGlobalPromotionBlocker(nextBoard)) {
     const nextTurn = piece.color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
     if (isKingInCheck(nextBoard, nextTurn, { ...gameState, board: nextBoard, currentTurn: nextTurn })) {

@@ -61,6 +61,13 @@ export const SPECIALIZED_EFFECTS = {
       gainsOneStepAfterMovingLastTurn: true,
     },
   },
+  'Golden Pawn': {
+    baseType: 'pawn',
+    rules: {
+      killsKingOnLastRank: true,
+      canPromote: false,
+    },
+  },
   'Gunslinger': {
     baseType: 'bishop',
     rules: {
