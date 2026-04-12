@@ -518,13 +518,21 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
 
   if (type === PIECE_TYPES.BISHOP) {
     const rules = getSpecializedRulesFromPiece(piece);
-    const moves = rules.delayedPassThroughKills
-      ? collectBladeRunnerMoves(board, row, col, color)
-      : rules.dynamicMarauderRange
-        ? collectMarauderMoves(board, row, col, color, gameState)
-        : rules.canBounceOnceOffEdge
-          ? collectBouncerMoves(board, row, col, color, gameState)
-          : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
+    const normalBishopMoves = rules.dynamicMarauderRange
+      ? collectMarauderMoves(board, row, col, color, gameState)
+      : rules.canBounceOnceOffEdge
+        ? collectBouncerMoves(board, row, col, color, gameState)
+        : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
+    const specialBladeRunnerMoves = rules.delayedPassThroughKills ? collectBladeRunnerMoves(board, row, col, color) : [];
+    const merged = new Map();
+    [...normalBishopMoves, ...specialBladeRunnerMoves].forEach(move => {
+      const key = `${move.row}:${move.col}`;
+      const prev = merged.get(key);
+      if (!prev || move.bladeRunnerPassedEnemyIds?.length) {
+        merged.set(key, move);
+      }
+    });
+    const moves = [...merged.values()];
     if (rules.canStepDirectlyBackward) {
       const backwardRow = color === COLORS.WHITE ? row + 1 : row - 1;
       if (isInsideBoard(backwardRow, col) && !getPiece(board, backwardRow, col)) {
