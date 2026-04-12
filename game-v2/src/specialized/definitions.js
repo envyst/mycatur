@@ -114,6 +114,12 @@ export const SPECIALIZED_EFFECTS = {
       canJumpEnemyPawnChainsForward: true,
     },
   },
+  'War Automator': {
+    baseType: 'pawn',
+    rules: {
+      autoAdvanceOnAnyCapture: true,
+    },
+  },
   'Phase Rook': {
     baseType: 'rook',
     rules: {

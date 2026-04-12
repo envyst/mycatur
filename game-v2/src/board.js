@@ -154,6 +154,13 @@ export function applyMove(board, fromRow, fromCol, toRow, toCol, gameState) {
     }
   }
 
+  if (isCapture) {
+    const advancedBoard = applyWarAutomatorAutoAdvance(nextBoard);
+    for (let row = 0; row < BOARD_SIZE; row += 1) {
+      nextBoard[row] = advancedBoard[row];
+    }
+  }
+
   resetsHalfmoveClock = piece.type === PIECE_TYPES.PAWN || isCapture;
 
   return {
@@ -294,6 +301,48 @@ function collectDirectionalMoves(board, row, col, color, directions, gameState) 
   }
 
   return moves;
+}
+
+
+function applyWarAutomatorAutoAdvance(board) {
+  const nextBoard = cloneBoard(board);
+  const automators = [];
+
+  for (let row = 0; row < BOARD_SIZE; row += 1) {
+    for (let col = 0; col < BOARD_SIZE; col += 1) {
+      const piece = nextBoard[row][col];
+      if (!piece || piece.type !== PIECE_TYPES.PAWN) continue;
+      const rules = getSpecializedRulesFromPiece(piece);
+      if (rules.autoAdvanceOnAnyCapture) {
+        automators.push({ id: piece.id, color: piece.color, row, col });
+      }
+    }
+  }
+
+  for (const automator of automators) {
+    const dir = automator.color === COLORS.WHITE ? -1 : 1;
+    let currentRow = -1;
+    let currentCol = -1;
+    for (let row = 0; row < BOARD_SIZE; row += 1) {
+      for (let col = 0; col < BOARD_SIZE; col += 1) {
+        const piece = nextBoard[row][col];
+        if (piece?.id === automator.id) {
+          currentRow = row;
+          currentCol = col;
+          break;
+        }
+      }
+      if (currentRow !== -1) break;
+    }
+    if (currentRow === -1) continue;
+    const targetRow = currentRow + dir;
+    if (!isInsideBoard(targetRow, currentCol)) continue;
+    if (nextBoard[targetRow][currentCol]) continue;
+    nextBoard[targetRow][currentCol] = nextBoard[currentRow][currentCol];
+    nextBoard[currentRow][currentCol] = null;
+  }
+
+  return nextBoard;
 }
 
 export function getPseudoLegalMoves(board, row, col, gameState = {}) {
