@@ -861,17 +861,16 @@ export function createGame() {
       const distance = Math.max(Math.abs(to.row - from.row), Math.abs(to.col - from.col));
       const prevTravel = state.pilgrimTravelById?.[piece.id] || 0;
       const nextTravel = prevTravel + distance;
-      const prevThresholds = Math.floor(prevTravel / 20);
-      const nextThresholds = Math.floor(nextTravel / 20);
-      state.pilgrimTravelById = {
-        ...(state.pilgrimTravelById || {}),
-        [piece.id]: nextTravel,
-      };
-      const spawnCount = Math.max(0, nextThresholds - prevThresholds);
+      const spawnCount = Math.floor(nextTravel / 20);
+      const remainingTravel = nextTravel % 20;
       if (spawnCount > 0) {
         const spawned = spawnPilgrimBishops(piece.color, from, spawnCount);
         state.statusMessage = `${piece.color} Pilgrim resurrected ${spawned} bishop${spawned === 1 ? '' : 's'}.`;
       }
+      state.pilgrimTravelById = {
+        ...(state.pilgrimTravelById || {}),
+        [piece.id]: remainingTravel,
+      };
     }
     if (piece?.specialization === 'Electroknight' && piece.id) {
       const prev = state.electroknightStateById?.[piece.id] || { consecutiveOwnMoves: 0, charged: false };
