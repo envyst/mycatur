@@ -603,6 +603,7 @@ export function createGame() {
     if (!state.pendingHordeSpawn) return false;
     if (state.board[row][col]) {
       state.statusMessage = 'Choose an empty square for the hordeling.';
+      setPendingHordePlacementTargets();
       redraw();
       return true;
     }
@@ -822,6 +823,18 @@ export function createGame() {
     state.validMoves = [];
   }
 
+  function setPendingHordePlacementTargets() {
+    state.selectedSquare = null;
+    state.validMoves = [];
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        if (!state.board[row][col]) {
+          state.validMoves.push({ row, col });
+        }
+      }
+    }
+  }
+
   async function persistState(move = null) {
     if (!state.sessionId || state.readOnly) return;
     await api.updateSession(state.sessionId, buildSessionPayload(state, move));
@@ -962,7 +975,7 @@ export function createGame() {
         motherId: piece.id,
       };
       state.statusMessage = `${piece.color} Horde Mother captured. Choose an empty square for the hordeling.`;
-      clearSelection();
+      setPendingHordePlacementTargets();
       redraw();
       return;
     }
