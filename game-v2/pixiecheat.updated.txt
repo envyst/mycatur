@@ -23,7 +23,7 @@
 23. marauder(bishop) =Moves like a king. Gains +2 range in every direction whenever it kills a piece.
 24. pawn with knife (pawn) =Has +1 diagonal capture range towards the center of the board.
 25.phase rook (rook) =Can pass through allies, but can't capture through them.
-26.pillagrim (bishop) =If this bishop travels 20 total squares, resurrect an allied piece.
+26.Pilgrim (bishop) =If this bishop travels 20 total squares, resurrect an allied piece.
 27.Pinata (knight) =At the start of the game, transform into a random Pixie Chess piece.
 28.Rocketman (king) =Once per game, spend a turn to blast off to a random tile.
 29. sumo rook (rook) =Knock pieces back instead of capturing.

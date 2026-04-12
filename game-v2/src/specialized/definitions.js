@@ -151,4 +151,10 @@ export const SPECIALIZED_EFFECTS = {
       cannotCaptureThroughAllies: true,
     },
   },
+  'Pilgrim': {
+    baseType: 'bishop',
+    rules: {
+      resurrectsBishopEveryTwentyTravel: true,
+    },
+  },
 };

@@ -569,6 +569,22 @@ export function createGame() {
 
 
 
+
+  function spawnPilgrimBishops(color, from, count) {
+    if (!count) return 0;
+    let spawned = 0;
+    for (let i = 0; i < count; i += 1) {
+      state.board[from.row][from.col] = {
+        id: `pilgrim-spawn-${color}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${i}`,
+        color,
+        type: PIECE_TYPES.BISHOP,
+        specialization: null,
+      };
+      spawned += 1;
+    }
+    return spawned;
+  }
+
   function triggerElectroknightDischarge(piece, landingRow, landingCol) {
     if (!piece?.id) return 0;
     const candidates = [];
@@ -841,6 +857,22 @@ export function createGame() {
         ...(state.specializedCaptureCountsById || {}),
         [piece.id]: (state.specializedCaptureCountsById?.[piece.id] || 0) + 1,
       };
+    }
+    if (piece?.id && piece.specialization === 'Pilgrim') {
+      const distance = Math.max(Math.abs(to.row - from.row), Math.abs(to.col - from.col));
+      const prevTravel = state.pilgrimTravelById?.[piece.id] || 0;
+      const nextTravel = prevTravel + distance;
+      const prevThresholds = Math.floor(prevTravel / 20);
+      const nextThresholds = Math.floor(nextTravel / 20);
+      state.pilgrimTravelById = {
+        ...(state.pilgrimTravelById || {}),
+        [piece.id]: nextTravel,
+      };
+      const spawnCount = Math.max(0, nextThresholds - prevThresholds);
+      if (spawnCount > 0) {
+        const spawned = spawnPilgrimBishops(piece.color, from, spawnCount);
+        state.statusMessage = `${piece.color} Pilgrim resurrected ${spawned} bishop${spawned === 1 ? '' : 's'}.`;
+      }
     }
     if (piece?.specialization === 'Electroknight' && piece.id) {
       const prev = state.electroknightStateById?.[piece.id] || { consecutiveOwnMoves: 0, charged: false };
