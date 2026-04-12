@@ -21,7 +21,7 @@ import {
 import { api } from './api.js';
 import { createEngine } from './engine.js';
 import { createEmptyAssignments } from './specialized/index.js';
-import { collectAdjacentEnemyIdsForIcicles } from './specialized/effects.js';
+import { collectAdjacentEnemyIdsForIcicles, SPECIALIZED_EFFECTS } from './specialized/effects.js';
 
 function sameSquare(a, b) {
   return a && b && a.row === b.row && a.col === b.col;
@@ -311,6 +311,25 @@ export function createGame() {
   }
 
 
+
+
+  function resolvePinataTransformations() {
+    if (!state.isSpecialized) return;
+    const defs = Object.entries(SPECIALIZED_EFFECTS || {});
+    const candidates = defs
+      .filter(([name, def]) => name !== 'Pinata' && def?.baseType !== 'pawn')
+      .map(([name]) => name);
+    if (!candidates.length) return;
+
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        const piece = state.board[row][col];
+        if (!piece || piece.specialization !== 'Pinata') continue;
+        const randomName = candidates[Math.floor(Math.random() * candidates.length)];
+        state.board[row][col] = { ...piece, specialization: randomName };
+      }
+    }
+  }
 
   function resolveBlueprintTransformations() {
     if (!state.isSpecialized) return;
@@ -1448,6 +1467,7 @@ export function createGame() {
     state.started = true;
     state.statusMessage = '';
     applySpecializationsToBoard();
+    resolvePinataTransformations();
     resolveBlueprintTransformations();
     updateIcicleFreezeState();
     updateGunslingerThreatState();

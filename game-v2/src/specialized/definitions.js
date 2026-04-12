@@ -163,6 +163,12 @@ export const SPECIALIZED_EFFECTS = {
       cannotCaptureThroughAllies: true,
     },
   },
+  'Pinata': {
+    baseType: 'knight',
+    rules: {
+      transformsAtGameStartRandomly: true,
+    },
+  },
   'Rocketman': {
     baseType: 'king',
     rules: {
