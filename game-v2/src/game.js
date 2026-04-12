@@ -532,6 +532,20 @@ export function createGame() {
     };
   }
 
+
+  function transformFirstAlliedPawnToGolden(color) {
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        const piece = state.board[row][col];
+        if (!piece || piece.color !== color || piece.type !== PIECE_TYPES.PAWN) continue;
+        if (piece.specialization === 'Golden Pawn') continue;
+        state.board[row][col] = { ...piece, specialization: 'Golden Pawn' };
+        return { row, col, piece: state.board[row][col] };
+      }
+    }
+    return null;
+  }
+
   function updateGameStatus() {
     const whiteKing = findKing(state.board, COLORS.WHITE);
     const blackKing = findKing(state.board, COLORS.BLACK);
@@ -745,6 +759,12 @@ export function createGame() {
         ...(state.specializedCaptureCountsById || {}),
         [piece.id]: (state.specializedCaptureCountsById?.[piece.id] || 0) + 1,
       };
+    }
+    if (piece?.specialization === 'Banker' && capturedPiece?.type === PIECE_TYPES.PAWN) {
+      const transformed = transformFirstAlliedPawnToGolden(piece.color);
+      if (transformed) {
+        state.statusMessage = `${piece.color} Banker transformed an allied pawn into a Golden Pawn.`;
+      }
     }
     const nextTurn = getOpponentColor(piece.color);
     const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, state, state.board, nextTurn);

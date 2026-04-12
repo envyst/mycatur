@@ -12,6 +12,12 @@ export const SPECIALIZED_EFFECTS = {
       suppressesAdjacentEnemyCaptures: true,
     },
   },
+  'Banker': {
+    baseType: 'knight',
+    rules: {
+      upgradesPawnToGoldenOnPawnCapture: true,
+    },
+  },
   'Basilisk': {
     baseType: 'bishop',
     rules: {
