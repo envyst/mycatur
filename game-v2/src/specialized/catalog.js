@@ -11,7 +11,7 @@ export const SPECIALIZED_CATALOG = {
     'Horde Mother',
     'Icicle',
     'Marauder',
-    'Pillgrim',
+    'Pilgrim',
   ],
   knight: [
     'Anti Violence',
