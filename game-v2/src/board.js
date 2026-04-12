@@ -238,7 +238,7 @@ function collectBladeRunnerMoves(board, row, col, color) {
     }
   }
 
-  return moves;
+  return moves.filter(move => (move.bladeRunnerPassedEnemyIds?.length || 0) > 0);
 }
 
 function collectBouncerMoves(board, row, col, color, gameState) {
