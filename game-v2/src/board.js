@@ -347,7 +347,7 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
         const victim = getPiece(board, victimRow, ep.col);
         const victimRules = getSpecializedRulesFromPiece(victim);
         const canUseNormalEnPassant = ep.row === row + dir && Math.abs(ep.col - col) === 1;
-        const canUseGlobalEpeeEnPassant = rules.canGlobalEnPassant === true && ep.row === row + dir;
+        const canUseGlobalEpeeEnPassant = rules.canGlobalEnPassant === true;
         if ((canUseNormalEnPassant || canUseGlobalEpeeEnPassant) && victimRules.canBeCaptured !== false) {
           moves.push({ row: ep.row, col: ep.col });
         }
