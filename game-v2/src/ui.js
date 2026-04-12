@@ -158,9 +158,10 @@ export function renderBoard(state, onSquareClick) {
         }
 
         const pilgrimTravel = state?.pilgrimTravelById?.[piece.id] || 0;
-        if (piece?.specialization === 'Pilgrim') {
+        const marauderCaptures = state?.specializedCaptureCountsById?.[piece.id] || 0;
+        const fissionCaptures = state?.specializedCaptureCountsById?.[piece.id] || 0;
+        if (piece?.specialization === 'Pilgrim' || piece?.specialization === 'Marauder' || piece?.specialization === 'Fission Reactor') {
           const counter = document.createElement('span');
-          counter.textContent = String(pilgrimTravel);
           counter.style.position = 'absolute';
           counter.style.top = '4px';
           counter.style.left = '4px';
@@ -168,12 +169,29 @@ export function renderBoard(state, onSquareClick) {
           counter.style.fontWeight = '800';
           counter.style.padding = '2px 4px';
           counter.style.borderRadius = '999px';
-          counter.style.background = 'rgba(120, 60, 0, 0.92)';
-          counter.style.color = '#fff7d6';
           counter.style.zIndex = '2';
           counter.style.pointerEvents = 'none';
+
+          let extraTitle = '';
+          if (piece.specialization === 'Pilgrim') {
+            counter.textContent = String(pilgrimTravel);
+            counter.style.background = 'rgba(120, 60, 0, 0.92)';
+            counter.style.color = '#fff7d6';
+            extraTitle = ` — Travel: ${pilgrimTravel}`;
+          } else if (piece.specialization === 'Marauder') {
+            counter.textContent = String(marauderCaptures);
+            counter.style.background = 'rgba(110, 22, 22, 0.92)';
+            counter.style.color = '#ffe1df';
+            extraTitle = ` — Captures: ${marauderCaptures}`;
+          } else if (piece.specialization === 'Fission Reactor') {
+            counter.textContent = `${fissionCaptures}/5`;
+            counter.style.background = 'rgba(98, 78, 0, 0.94)';
+            counter.style.color = '#fff3b0';
+            extraTitle = ` — Fission: ${fissionCaptures}/5`;
+          }
+
           square.appendChild(counter);
-          span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag} — Travel: ${pilgrimTravel}` : `${getPieceLabel(piece)}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag} — Travel: ${pilgrimTravel}`;
+          span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag}${extraTitle}` : `${getPieceLabel(piece)}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag}${extraTitle}`;
         }
       }
 
