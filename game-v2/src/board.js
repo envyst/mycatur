@@ -27,7 +27,7 @@ function isPromotionSquare(piece, row, gameState, col) {
   if (boardHasGlobalPromotionBlocker(gameState?.board || gameState?.boardState || gameState?.nextBoard || [])) {
     return false;
   }
-  if (piece.type === PIECE_TYPES.PAWN && rules.canPromote === false) {
+  if (piece.type === PIECE_TYPES.PAWN && (rules.canPromote === false || piece.noPromotion === true)) {
     return false;
   }
   return piece.type === PIECE_TYPES.PAWN && ((piece.color === COLORS.WHITE && row === 0) || (piece.color === COLORS.BLACK && row === 7));

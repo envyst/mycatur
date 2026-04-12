@@ -98,6 +98,12 @@ export const SPECIALIZED_EFFECTS = {
       gunslingerMutualThreatKill: true,
     },
   },
+  'Horde Mother': {
+    baseType: 'bishop',
+    rules: {
+      spawnsHordelingOnCapture: true,
+    },
+  },
   'Hero Pawn': {
     baseType: 'pawn',
     rules: {

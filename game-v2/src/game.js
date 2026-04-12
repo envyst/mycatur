@@ -570,6 +570,53 @@ export function createGame() {
 
 
 
+
+  function removeHordeFamily(familyId) {
+    if (!familyId) return 0;
+    let removed = 0;
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        const piece = state.board[row][col];
+        if (piece?.hordeFamilyId === familyId) {
+          state.board[row][col] = null;
+          removed += 1;
+        }
+      }
+    }
+    return removed;
+  }
+
+  function createHordeling(color, familyId) {
+    return {
+      id: `hordeling-${color}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      color,
+      type: PIECE_TYPES.PAWN,
+      specialization: null,
+      customMarker: 'H',
+      hordeFamilyId: familyId,
+      isHordeling: true,
+      noPromotion: true,
+    };
+  }
+
+  async function handlePendingHordeSpawn(row, col) {
+    if (!state.pendingHordeSpawn) return false;
+    if (state.board[row][col]) {
+      state.statusMessage = 'Choose an empty square for the hordeling.';
+      redraw();
+      return true;
+    }
+    state.board[row][col] = createHordeling(state.pendingHordeSpawn.color, state.pendingHordeSpawn.familyId);
+    state.pendingHordeSpawn = null;
+    state.replayStates = [...(state.replayStates || []), { board: cloneBoardState(state.board), currentTurn: getOpponentColor(state.currentTurn), result: null, status: 'active' }];
+    state.replayIndex = state.replayStates.length - 1;
+    state.replayBoard = null;
+    await finalizeTurn();
+    redraw();
+    maybeDoEngineMove();
+    return true;
+  }
+
   function spawnPilgrimBishops(color, from, count) {
     if (!count) return 0;
     if (state.board[from.row]?.[from.col]) return 0;
@@ -846,10 +893,14 @@ export function createGame() {
     const boardBefore = cloneBoardState(state.board);
     const piece = getPiece(state.board, from.row, from.col);
     const capturedPiece = getPiece(state.board, to.row, to.col);
+    const capturedFamilyId = capturedPiece?.hordeFamilyId || null;
     const applied = applyMove(state.board, from.row, from.col, to.row, to.col, state);
     state.board = applied.board;
     state.castlingRights = applied.castlingRights;
     state.enPassantTarget = applied.enPassantTarget;
+    if (capturedFamilyId) {
+      removeHordeFamily(capturedFamilyId);
+    }
     const movedRules = piece?.specialization ? { specialization: piece.specialization } : null;
     if (piece?.id && piece.specialization === 'Marauder' && applied.isCapture) {
       state.specializedCaptureCountsById = {
@@ -901,6 +952,19 @@ export function createGame() {
       if (transformed) {
         state.statusMessage = `${piece.color} Banker transformed an allied pawn into a Golden Pawn.`;
       }
+    }
+    if (piece?.specialization === 'Horde Mother' && applied.isCapture) {
+      const familyId = piece.hordeFamilyId || `horde-${piece.id}`;
+      state.board[to.row][to.col] = { ...state.board[to.row][to.col], hordeFamilyId: familyId };
+      state.pendingHordeSpawn = {
+        familyId,
+        color: piece.color,
+        motherId: piece.id,
+      };
+      state.statusMessage = `${piece.color} Horde Mother captured. Choose an empty square for the hordeling.`;
+      clearSelection();
+      redraw();
+      return;
     }
     if (piece?.id && piece.specialization === 'Fission Reactor' && applied.isCapture) {
       const nextCount = (state.specializedCaptureCountsById?.[piece.id] || 0) + 1;
@@ -1093,6 +1157,10 @@ export function createGame() {
 
   async function handleSquareClick(row, col) {
     if (!state.started || state.readOnly || state.replayBoard || state.aiThinking) return;
+    if (state.pendingHordeSpawn) {
+      await handlePendingHordeSpawn(row, col);
+      return;
+    }
 
     if (state.isSandbox) {
       const piece = getPiece(state.board, row, col);
