@@ -18,6 +18,12 @@ export const SPECIALIZED_EFFECTS = {
       upgradesPawnToGoldenOnPawnCapture: true,
     },
   },
+  'Blade Runner': {
+    baseType: 'bishop',
+    rules: {
+      delayedPassThroughKills: true,
+    },
+  },
   'Basilisk': {
     baseType: 'bishop',
     rules: {

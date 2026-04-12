@@ -101,10 +101,12 @@ export function renderBoard(state, onSquareClick) {
         span.textContent = getPieceSymbol(piece);
         const isFrozen = Boolean(state?.specializedStatusById?.[piece.id]?.frozen);
         const isSniped = Boolean(Object.values(state?.gunslingerStateById || {}).some(gs => gs?.targets?.[piece.id]?.armed));
+        const isBladeMarked = Boolean(Object.values(state?.bladeRunnerPendingKillsByColor || {}).some(ids => Array.isArray(ids) && ids.includes(piece.id)));
         const isDancerActive = state?.activeDancerSpecialPieceId === piece.id;
         const isElectroCharged = Boolean(state?.electroknightStateById?.[piece.id]?.charged);
         const frozenFlag = isFrozen ? ' — Frozen' : '';
         const snipedFlag = isSniped ? ' — Sniped' : '';
+        const bladeFlag = isBladeMarked ? ' — Pending Kill' : '';
         const dancerFlag = isDancerActive ? ' — Dancer Special' : '';
         const electroFlag = isElectroCharged ? ' — Charged' : '';
         if (isFrozen) {
@@ -114,7 +116,7 @@ export function renderBoard(state, onSquareClick) {
             : '0 0 8px rgba(46, 109, 255, 0.85), 0 0 2px rgba(10,20,60,0.95)';
           span.style.filter = 'drop-shadow(0 0 2px rgba(120,200,255,0.65))';
         }
-        if (isSniped) {
+        if (isSniped || isBladeMarked) {
           span.style.color = piece.color === 'white' ? '#ff77c8' : '#8a1124';
           span.style.textShadow = piece.color === 'white'
             ? '0 0 8px rgba(255, 119, 200, 0.85), 0 0 2px rgba(255,230,245,0.9)'
@@ -134,7 +136,7 @@ export function renderBoard(state, onSquareClick) {
             : '0 0 8px rgba(216, 166, 0, 0.95), 0 0 2px rgba(80,50,0,0.95)';
           span.style.filter = 'drop-shadow(0 0 2px rgba(255,215,64,0.8))';
         }
-        span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag}` : `${getPieceLabel(piece)}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag}`;
+        span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}${snipedFlag}${bladeFlag}${dancerFlag}${electroFlag}` : `${getPieceLabel(piece)}${frozenFlag}${snipedFlag}${bladeFlag}${dancerFlag}${electroFlag}`;
         square.appendChild(span);
 
         const customMarker = piece?.customMarker ? abbreviateSandboxMarker(piece.customMarker) : '';
@@ -191,7 +193,7 @@ export function renderBoard(state, onSquareClick) {
           }
 
           square.appendChild(counter);
-          span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag}${extraTitle}` : `${getPieceLabel(piece)}${frozenFlag}${snipedFlag}${dancerFlag}${electroFlag}${extraTitle}`;
+          span.title = assigned ? `${getPieceLabel(piece)} — ${assigned.specialization}${frozenFlag}${snipedFlag}${bladeFlag}${dancerFlag}${electroFlag}${extraTitle}` : `${getPieceLabel(piece)}${frozenFlag}${snipedFlag}${bladeFlag}${dancerFlag}${electroFlag}${extraTitle}`;
         }
       }
 

@@ -211,6 +211,36 @@ function collectMarauderMoves(board, row, col, color, gameState) {
   return moves;
 }
 
+
+function collectBladeRunnerMoves(board, row, col, color) {
+  const moves = [];
+  const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+  for (const [dr, dc] of directions) {
+    let r = row + dr;
+    let c = col + dc;
+    const passedEnemyIds = [];
+
+    while (isInsideBoard(r, c)) {
+      const target = getPiece(board, r, c);
+      if (!target) {
+        if (passedEnemyIds.length) {
+          moves.push({ row: r, col: c, bladeRunnerPassedEnemyIds: [...passedEnemyIds] });
+        }
+        r += dr;
+        c += dc;
+        continue;
+      }
+      if (target.color === color) break;
+      passedEnemyIds.push(target.id);
+      r += dr;
+      c += dc;
+    }
+  }
+
+  return moves;
+}
+
 function collectBouncerMoves(board, row, col, color, gameState) {
   const moves = [];
   const movingPiece = getPiece(board, row, col);
@@ -488,11 +518,13 @@ export function getPseudoLegalMoves(board, row, col, gameState = {}) {
 
   if (type === PIECE_TYPES.BISHOP) {
     const rules = getSpecializedRulesFromPiece(piece);
-    const moves = rules.dynamicMarauderRange
-      ? collectMarauderMoves(board, row, col, color, gameState)
-      : rules.canBounceOnceOffEdge
-        ? collectBouncerMoves(board, row, col, color, gameState)
-        : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
+    const moves = rules.delayedPassThroughKills
+      ? collectBladeRunnerMoves(board, row, col, color)
+      : rules.dynamicMarauderRange
+        ? collectMarauderMoves(board, row, col, color, gameState)
+        : rules.canBounceOnceOffEdge
+          ? collectBouncerMoves(board, row, col, color, gameState)
+          : collectDirectionalMoves(board, row, col, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]], gameState);
     if (rules.canStepDirectlyBackward) {
       const backwardRow = color === COLORS.WHITE ? row + 1 : row - 1;
       if (isInsideBoard(backwardRow, col) && !getPiece(board, backwardRow, col)) {
@@ -600,6 +632,9 @@ export function isSquareAttacked(board, targetRow, targetCol, byColor, gameState
         continue;
       }
 
+      if (pieceRules.delayedPassThroughKills) {
+        continue;
+      }
       const moves = getPseudoLegalMoves(board, row, col, {
         castlingRights: null,
         enPassantTarget: null,

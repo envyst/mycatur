@@ -329,6 +329,32 @@ export function createGame() {
     }
   }
 
+
+  function resolveBladeRunnerPendingKillsForColor(color) {
+    const pending = state.bladeRunnerPendingKillsByColor?.[color] || [];
+    if (!pending.length) return 0;
+    let removed = 0;
+    const pendingIds = new Set(pending);
+    for (let row = 0; row < state.board.length; row += 1) {
+      for (let col = 0; col < state.board[row].length; col += 1) {
+        const piece = state.board[row][col];
+        if (piece?.id && pendingIds.has(piece.id)) {
+          if (piece.hordeFamilyId) {
+            removed += removeHordeFamily(piece.hordeFamilyId);
+          } else {
+            state.board[row][col] = null;
+            removed += 1;
+          }
+        }
+      }
+    }
+    state.bladeRunnerPendingKillsByColor = {
+      ...(state.bladeRunnerPendingKillsByColor || {}),
+      [color]: [],
+    };
+    return removed;
+  }
+
   function updateIcicleFreezeState() {
     if (!state.isSpecialized) return;
     const adjacentIds = collectAdjacentEnemyIdsForIcicles(state.board);
@@ -843,6 +869,10 @@ export function createGame() {
 
   async function finalizeTurn(move = null) {
     state.currentTurn = getOpponentColor(state.currentTurn);
+    const bladeRunnerRemoved = resolveBladeRunnerPendingKillsForColor(state.currentTurn);
+    if (bladeRunnerRemoved) {
+      state.statusMessage = `${state.currentTurn} Blade Runner delayed kill removed ${bladeRunnerRemoved} piece${bladeRunnerRemoved === 1 ? '' : 's'}.`;
+    }
     state.activeDancerSpecialPieceId = null;
     incrementPositionHistory(state);
     clearSelection();
@@ -991,6 +1021,15 @@ export function createGame() {
       }
     }
     const nextTurn = getOpponentColor(piece.color);
+    const bladeRunnerPassedEnemyIds = state.validMoves.find(move => move.row === to.row && move.col === to.col)?.bladeRunnerPassedEnemyIds || [];
+    if (piece?.specialization === 'Blade Runner' && bladeRunnerPassedEnemyIds.length) {
+      const prevPending = state.bladeRunnerPendingKillsByColor?.[piece.color] || [];
+      state.bladeRunnerPendingKillsByColor = {
+        ...(state.bladeRunnerPendingKillsByColor || {}),
+        [piece.color]: [...new Set([...prevPending, ...bladeRunnerPassedEnemyIds])],
+      };
+      state.statusMessage = `${piece.color} Blade Runner marked ${bladeRunnerPassedEnemyIds.length} piece${bladeRunnerPassedEnemyIds.length === 1 ? '' : 's'} for delayed death.`;
+    }
     const provisionalSan = buildSan(piece, from, to, applied, capturedPiece, null, boardBefore, state, state.board, nextTurn);
     if (applied.isCapture) {
       resolveDjinnReturnsOnCapture();
@@ -1209,7 +1248,12 @@ export function createGame() {
     if (state.mode === 'human-vs-ai' && state.currentTurn !== state.playerColor) return;
 
     const piece = getPiece(state.board, row, col);
-    if (piece && state.isSpecialized && piece.color === state.currentTurn && state.specializedStatusById?.[piece.id]?.frozen) {
+    if (piece && state.isSpecialized && (state.specializedStatusById?.[piece.id]?.frozen || Object.values(state?.bladeRunnerPendingKillsByColor || {}).some(ids => Array.isArray(ids) && ids.includes(piece.id)))) {
+      if (Object.values(state?.bladeRunnerPendingKillsByColor || {}).some(ids => Array.isArray(ids) && ids.includes(piece.id))) {
+        state.statusMessage = 'This piece is marked for Blade Runner delayed death and cannot move.';
+        redraw();
+        return;
+      }
       if (state.selectedSquare && sameSquare(state.selectedSquare, { row, col })) {
         spendTurnToUnfreeze(piece);
         return;
