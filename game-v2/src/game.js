@@ -572,16 +572,15 @@ export function createGame() {
 
   function spawnPilgrimBishops(color, from, count) {
     if (!count) return 0;
+    if (state.board[from.row]?.[from.col]) return 0;
     let spawned = 0;
-    for (let i = 0; i < count; i += 1) {
-      state.board[from.row][from.col] = {
-        id: `pilgrim-spawn-${color}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${i}`,
-        color,
-        type: PIECE_TYPES.BISHOP,
-        specialization: null,
-      };
-      spawned += 1;
-    }
+    state.board[from.row][from.col] = {
+      id: `pilgrim-spawn-${color}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      color,
+      type: PIECE_TYPES.BISHOP,
+      specialization: null,
+    };
+    spawned = 1;
     return spawned;
   }
 
