@@ -49,6 +49,12 @@ export const SPECIALIZED_EFFECTS = {
       gainsSpecialTwoStepAfterChecking: true,
     },
   },
+  'Electroknight': {
+    baseType: 'knight',
+    rules: {
+      chargesAfterThreeConsecutiveOwnMoves: true,
+    },
+  },
   'Epee Pawn': {
     baseType: 'pawn',
     rules: {

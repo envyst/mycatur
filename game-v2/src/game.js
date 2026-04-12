@@ -534,6 +534,31 @@ export function createGame() {
 
 
 
+
+  function triggerElectroknightDischarge(piece, landingRow, landingCol) {
+    if (!piece?.id) return 0;
+    const candidates = [];
+    for (let r = Math.max(0, landingRow - 1); r <= Math.min(7, landingRow + 1); r += 1) {
+      for (let c = Math.max(0, landingCol - 1); c <= Math.min(7, landingCol + 1); c += 1) {
+        if (r === landingRow && c === landingCol) continue;
+        const target = state.board[r][c];
+        if (!target || target.color === piece.color) continue;
+        candidates.push({ row: r, col: c, id: target.id });
+      }
+    }
+    state.electroknightStateById = {
+      ...(state.electroknightStateById || {}),
+      [piece.id]: {
+        consecutiveOwnMoves: 0,
+        charged: false,
+      },
+    };
+    if (!candidates.length) return 0;
+    const selected = candidates[Math.floor(Math.random() * candidates.length)];
+    state.board[selected.row][selected.col] = null;
+    return 1;
+  }
+
   function triggerFissionReactorExplosion(pieceId, color) {
     const pos = findPieceById(pieceId);
     if (!pos) return 0;
@@ -782,6 +807,30 @@ export function createGame() {
         ...(state.specializedCaptureCountsById || {}),
         [piece.id]: (state.specializedCaptureCountsById?.[piece.id] || 0) + 1,
       };
+    }
+    if (piece?.specialization === 'Electroknight' && piece.id) {
+      const prev = state.electroknightStateById?.[piece.id] || { consecutiveOwnMoves: 0, charged: false };
+      const nextCount = prev.charged ? prev.consecutiveOwnMoves : (prev.consecutiveOwnMoves || 0) + 1;
+      const nextCharged = prev.charged || nextCount >= 3;
+      state.electroknightStateById = {
+        ...(state.electroknightStateById || {}),
+        [piece.id]: {
+          consecutiveOwnMoves: nextCount,
+          charged: nextCharged,
+        },
+      };
+      if (nextCharged && applied.isCapture) {
+        const chainedKills = triggerElectroknightDischarge(piece, to.row, to.col);
+        state.statusMessage = `${piece.color} Electroknight discharged${chainedKills ? ` and electrocuted ${chainedKills} adjacent enemy.` : '.'}`;
+      }
+    } else if (piece?.color) {
+      const nextEkState = { ...(state.electroknightStateById || {}) };
+      Object.entries(nextEkState).forEach(([id, info]) => {
+        const ekPos = findPieceById(id);
+        if (!ekPos || ekPos.piece?.color !== piece.color) return;
+        nextEkState[id] = { ...(info || {}), consecutiveOwnMoves: 0, charged: false };
+      });
+      state.electroknightStateById = nextEkState;
     }
     if (piece?.specialization === 'Banker' && capturedPiece?.type === PIECE_TYPES.PAWN) {
       const transformed = transformFirstAlliedPawnToGolden(piece.color);
