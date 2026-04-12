@@ -63,7 +63,7 @@ export function renderBoard(state, onSquareClick) {
   boardEl.innerHTML = '';
 
   const selected = state.selectedSquare;
-  const validTargets = selected ? state.validMoves.map(move => `${move.row}:${move.col}`) : [];
+  const validTargets = (selected || state.pendingHordeSpawn) ? state.validMoves.map(move => `${move.row}:${move.col}`) : [];
   const displayRows = getDisplayRows(state.playerColor);
   const displayCols = getDisplayCols(state.playerColor);
   const boardToRender = state.replayBoard || state.board;
